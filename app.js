@@ -136,6 +136,7 @@
     $('occupied-count').textContent=state.guests.filter(g=>g.rowId!==null).length;
     $('waiting-count').textContent=state.guests.filter(g=>g.rowId===null).length;
     $('capacity-label').textContent=`من أصل ${state.rows.reduce((total,row)=>total+row.seatCount,0)} مقعدًا`;
+    document.querySelectorAll('[data-metric]').forEach(output=>{output.textContent=$(output.dataset.metric).textContent;});
     $('add-row').disabled=state.rows.length>=50;
     $('seats').replaceChildren();
     for(const row of state.rows){
@@ -306,6 +307,7 @@
     const management=route==='guest-section'||route==='reports',layout=route==='dashboard'||route==='seating-layout';
     $('dashboard').hidden=!layout;$('guest-section').hidden=!management;$('secondary-view').hidden=layout||management;
     $('management-details').hidden=route==='reports';
+    $('dashboard-stats').hidden=route!=='dashboard';
     $('management-title').textContent=route==='reports'?routes.reports:routes['guest-section'];
     $('layout-view-title').textContent=routes[layout?route:'dashboard'];$('current-view-title').textContent=routes[route];
     $('settings-shortcut').hidden=route!=='settings';
