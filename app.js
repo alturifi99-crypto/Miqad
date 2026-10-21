@@ -319,7 +319,7 @@
   function setSidebar(collapsed,save=false){
     document.body.classList.toggle('sidebar-collapsed',collapsed);
     const text=collapsed?'توسيع القائمة الجانبية':'طي القائمة الجانبية';
-    $('sidebar-toggle').setAttribute('aria-expanded',String(!collapsed));$('sidebar-toggle').setAttribute('aria-label',text);$('sidebar-toggle').title=text;$('sidebar-toggle').textContent=collapsed?'⇤':'⇥';
+    $('sidebar-toggle').setAttribute('aria-expanded',String(!collapsed));$('sidebar-toggle').setAttribute('aria-label',text);$('sidebar-toggle').title=text;
     if(save)try{localStorage.setItem('miqadSidebarCollapsed',String(collapsed));}catch{/* Navigation remains usable when preference storage is unavailable. */}
   }
   let collapsed=false;try{collapsed=localStorage.getItem('miqadSidebarCollapsed')==='true';}catch{}
