@@ -1,80 +1,56 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>مِيقاد MIQAD</title>
-<style>
-body{font-family:Arial;background:#101b2b;color:white;margin:0;padding:20px}
-h1{color:#d8b76a}
-section{background:#1c2b40;padding:20px;margin:15px 0;border-radius:12px}
-input,button{padding:12px;margin:5px;border-radius:8px;border:0;font-size:15px}
-button{background:#d8b76a;color:#101b2b;cursor:pointer}
-.seats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
-.seat{background:#31516b;color:white;padding:15px 5px}
-.taken{background:#27785c}
-li{margin:10px}
-</style>
+<meta name="theme-color" content="#142b29">
+<title>مِيقاد | إدارة البروتوكول والضيوف</title>
+<link rel="stylesheet" href="styles.css">
+<script src="app.js" defer></script>
 </head>
 <body>
-<h1>مِيقاد | MIQAD</h1>
-<p>نظام إدارة البروتوكول وتجليس كبار الشخصيات VIP</p>
-<section>
-<h2>إضافة ضيف</h2>
-<input id="name" placeholder="اسم الضيف">
-<button onclick="addGuest()">إضافة الضيف</button>
+<aside class="sidebar">
+<a class="brand" href="#dashboard"><span class="brand-mark">م</span><span>مِيقاد<small>MIQAD · PROTOCOL</small></span></a>
+<p class="nav-label">مساحة العمل</p>
+<nav aria-label="التنقل الرئيسي">
+<a href="#dashboard">◈ <span>لوحة التحكم</span></a>
+<a href="#guest-section">♙ <span>إدارة الضيوف</span></a>
+<a href="#seating-section">▦ <span>توزيع المقاعد</span></a>
+</nav>
+<div class="sidebar-note"><span class="status-dot"></span> مساحة تنظيمك، بكل اتّزان<p>إدارة تفاصيل الضيافة من الوصول إلى المقعد.</p></div>
+</aside>
+<main id="dashboard">
+<header class="topbar"><span>مساحة العمل <span class="separator">/</span> <strong>لوحة التحكم</strong></span><span class="workspace-badge">مِيقاد للبروتوكول</span></header>
+<section class="page-heading"><div><p class="eyebrow">كل التفاصيل، في مكان واحد</p><h1>أهلًا بك في مِيقاد</h1><p class="muted">نظّم ضيوفك، ورتّب مقاعدهم، وامنح كل ضيف مكانه المناسب.</p></div><a class="button primary" href="#guest-form" id="new-guest-link">＋ إضافة ضيف</a></section>
+<div id="storage-warning" class="warning" role="alert" hidden></div>
+<div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+<section class="stats" aria-label="ملخص الضيوف والمقاعد">
+<article class="stat"><span class="stat-icon">♙</span><p>إجمالي الضيوف</p><strong id="total-count">0</strong><small>ضيف مسجّل</small></article>
+<article class="stat"><span class="stat-icon gold">✧</span><p>كبار الشخصيات</p><strong id="vip-count">0</strong><small>ضيوف بأولوية خاصة</small></article>
+<article class="stat"><span class="stat-icon">▦</span><p>المقاعد المشغولة</p><strong id="occupied-count">0</strong><small>من أصل 20 مقعدًا</small></article>
+<article class="stat"><span class="stat-icon gold">◷</span><p>بانتظار التجليس</p><strong id="waiting-count">0</strong><small>ضيف دون مقعد</small></article>
 </section>
-<section>
-<h2>مخطط المقاعد</h2>
-<p>المسرح</p>
-<div class="seats" id="seats"></div>
+<div class="workspace-grid">
+<section class="panel seating-panel" id="seating-section"><div class="panel-heading"><div><p class="eyebrow">توزيع مدروس، استقبال يليق</p><h2>مخطط المقاعد</h2></div><span class="pill">القاعة الرئيسية</span></div>
+<div class="seating-toolbar"><label for="assignment-guest">الضيف المراد تجليسه</label><select id="assignment-guest"><option value="">تلقائيًا: أول ضيف ينتظر</option></select><p class="muted">اختر مقعدًا فارغًا للتجليس، أو مقعدًا مشغولًا لإدارته.</p></div>
+<div class="stage">المنصّة الرئيسية<span>STAGE</span></div><div class="seats" id="seats" aria-label="مخطط 20 مقعدًا"></div>
+<div class="legend"><span><i></i> متاح</span><span><i class="occupied"></i> محجوز</span><span><i class="vip"></i> كبار الشخصيات</span></div>
 </section>
-<section>
-<h2>قائمة الضيوف</h2>
-<ul id="guests"></ul>
+<section class="panel form-panel"><div class="panel-heading"><div><p class="eyebrow">ضيافة تبدأ بالتفاصيل</p><h2 id="form-title">إضافة ضيف جديد</h2></div><span class="stat-icon">＋</span></div>
+<form id="guest-form"><label for="name">اسم الضيف <span class="required">*</span></label><input id="name" name="name" placeholder="الاسم الكامل" required maxlength="120" autocomplete="name">
+<label for="title">المسمى الوظيفي أو الجهة</label><input id="title" name="title" placeholder="مثال: مدير العلاقات العامة" maxlength="160" autocomplete="organization-title">
+<label for="category">فئة الضيف</label><select id="category" name="category"><option value="regular">ضيف</option><option value="vip">كبار الشخصيات · VIP</option></select>
+<label for="guest-seat">المقعد</label><select id="guest-seat" name="seat"></select>
+<div class="form-actions"><button class="button primary" type="submit" id="save-guest">إضافة الضيف</button><button class="button secondary" type="button" id="cancel-edit" hidden>إلغاء التعديل</button></div>
+<p class="form-hint">تُحفظ البيانات تلقائيًا في هذا المتصفح على هذا الجهاز.</p></form></section>
+</div>
+<section class="panel guest-panel" id="guest-section"><div class="panel-heading"><div><p class="eyebrow">قائمة الحضور</p><h2>الضيوف وكبار الشخصيات <span id="list-count" class="count">0</span></h2></div><span class="muted">تفاصيل واضحة لاستقبال أفضل</span></div>
+<div class="filters"><label class="search-label" for="search">البحث عن ضيف<input type="search" id="search" placeholder="ابحث بالاسم أو الجهة…"></label><label for="filter">عرض الفئة<select id="filter"><option value="all">جميع الضيوف</option><option value="vip">كبار الشخصيات</option><option value="waiting">بانتظار التجليس</option><option value="seated">تم التجليس</option></select></label></div>
+<div class="table-scroll"><table><thead><tr><th scope="col">الضيف</th><th scope="col">الفئة</th><th scope="col">المقعد</th><th scope="col">الحالة</th><th scope="col">الإجراءات</th></tr></thead><tbody id="guests"></tbody></table></div><div id="empty-state" class="empty-state"><span>♙</span><h3>قائمة ضيوفك تبدأ هنا</h3><p>أضف أول ضيف، ثم اختر له مقعدًا في القاعة.</p></div>
 </section>
-<script>
-let guests=JSON.parse(localStorage.getItem("miqadGuests")||"[]");
-function save(){
-localStorage.setItem("miqadGuests",JSON.stringify(guests));
-}
-function render(){
-let seats=document.getElementById("seats");
-let list=document.getElementById("guests");
-seats.innerHTML="";
-list.innerHTML="";
-for(let i=1;i<=20;i++){
-let guest=guests.find(g=>g.seat===i);
-let btn=document.createElement("button");
-btn.className="seat"+(guest?" taken":"");
-btn.textContent=guest?guest.name:"مقعد "+i;
-btn.onclick=()=>assign(i);
-seats.appendChild(btn);
-}
-guests.forEach(g=>{
-let li=document.createElement("li");
-li.textContent=g.name+" — "+(g.seat?"مقعد "+g.seat:"بدون مقعد");
-list.appendChild(li);
-});
-}
-function addGuest(){
-let input=document.getElementById("name");
-let name=input.value.trim();
-if(!name)return alert("اكتب اسم الضيف");
-guests.push({id:Date.now()+Math.random(),name,seat:null});
-input.value="";
-save();render();
-}
-function assign(seat){
-let guest=guests.find(g=>g.seat===seat);
-if(guest)return alert("المقعد محجوز");
-let waiting=guests.find(g=>g.seat===null);
-if(!waiting)return alert("لا يوجد ضيف ينتظر التجليس");
-waiting.seat=seat;
-save();render();
-}
-render();
-</script>
+<footer>مِيقاد <span>عناية بالتفاصيل. ترحيب يليق.</span></footer>
+</main>
+<dialog id="seat-dialog" aria-labelledby="seat-dialog-title"><h2 id="seat-dialog-title">إدارة المقعد</h2><p id="seat-description"></p><div class="dialog-actions"><button type="button" class="button primary" id="edit-seat-guest">تعديل الضيف</button><button type="button" class="button secondary" id="release-seat">إخلاء المقعد</button><button type="button" class="button secondary" id="close-seat">إغلاق</button></div></dialog>
+<dialog id="delete-dialog" aria-labelledby="delete-title"><h2 id="delete-title">حذف الضيف؟</h2><p id="delete-description"></p><div class="dialog-actions"><button type="button" class="button danger" id="confirm-delete">حذف الضيف</button><button type="button" class="button secondary" id="cancel-delete">إلغاء</button></div></dialog>
 </body>
 </html>
