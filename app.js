@@ -142,5 +142,16 @@
   };
   $('search').oninput=renderList;$('filter').onchange=renderList;$('seat-search').oninput=renderLookup;
   window.addEventListener('storage',e=>{if(e.key===KEY||e.key===null)message('storage-warning','تغيرت البيانات في نافذة أخرى. حدّث الصفحة قبل التعديل للحفاظ على أحدث نسخة.');});
+  function showView(){
+    const management=location.hash==='#guest-section';
+    $('dashboard').hidden=management;$('guest-section').hidden=!management;
+    $('current-view-title').textContent=management?'إدارة الضيوف':'لوحة التحكم';
+    document.querySelectorAll('.sidebar nav a').forEach(a=>{
+      const selected=a.hash===(management?'#guest-section':'#dashboard');
+      if(selected)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');
+    });
+  }
+  window.addEventListener('hashchange',showView);
+  showView();
   load();render();
 })();
