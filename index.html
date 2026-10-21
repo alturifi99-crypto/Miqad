@@ -4,13 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#142b29">
-<title>مِيقاد | إدارة البروتوكول والضيوف</title>
+<title>مقعد | إدارة البروتوكول والضيوف</title>
 <link rel="stylesheet" href="styles.css">
 <script src="app.js" defer></script>
 </head>
 <body>
 <aside class="sidebar">
-<a class="brand" href="#dashboard"><span class="brand-mark">م</span><span>مِيقاد<small>MIQAD · PROTOCOL</small></span></a>
+<a class="brand" href="#dashboard"><span class="brand-mark">م</span><span>مقعد<small>إدارة البروتوكول</small></span></a>
 <p class="nav-label">مساحة العمل</p>
 <nav aria-label="التنقل الرئيسي">
 <a href="#dashboard">◈ <span>لوحة التحكم</span></a>
@@ -20,8 +20,8 @@
 <div class="sidebar-note"><span class="status-dot"></span> مساحة تنظيمك، بكل اتّزان<p>إدارة تفاصيل الضيافة من الوصول إلى المقعد.</p></div>
 </aside>
 <main id="dashboard">
-<header class="topbar"><span>مساحة العمل <span class="separator">/</span> <strong>لوحة التحكم</strong></span><span class="workspace-badge">مِيقاد للبروتوكول</span></header>
-<section class="page-heading"><div><p class="eyebrow">كل التفاصيل، في مكان واحد</p><h1>أهلًا بك في مِيقاد</h1><p class="muted">نظّم ضيوفك، ورتّب مقاعدهم، وامنح كل ضيف مكانه المناسب.</p></div><a class="button primary" href="#guest-form" id="new-guest-link">＋ إضافة ضيف</a></section>
+<header class="topbar"><span>مساحة العمل <span class="separator">/</span> <strong>لوحة التحكم</strong></span><span class="workspace-badge">مقعد للبروتوكول</span></header>
+<section class="page-heading"><div><p class="eyebrow">كل التفاصيل، في مكان واحد</p><h1>أهلًا بك في مقعد</h1><p class="muted">نظّم ضيوفك، ورتّب مقاعدهم، وامنح كل ضيف مكانه المناسب.</p></div><a class="button primary" href="#guest-form" id="new-guest-link">＋ إضافة ضيف</a></section>
 <div id="storage-warning" class="warning" role="alert" hidden></div>
 <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
 <section class="stats" aria-label="ملخص الضيوف والمقاعد">
@@ -48,7 +48,7 @@
 <div class="filters"><label class="search-label" for="search">البحث عن ضيف<input type="search" id="search" placeholder="ابحث بالاسم أو الجهة…"></label><label for="filter">عرض الفئة<select id="filter"><option value="all">جميع الضيوف</option><option value="vip">كبار الشخصيات</option><option value="waiting">بانتظار التجليس</option><option value="seated">تم التجليس</option></select></label></div>
 <div class="table-scroll"><table><thead><tr><th scope="col">الضيف</th><th scope="col">الفئة</th><th scope="col">المقعد</th><th scope="col">الحالة</th><th scope="col">الإجراءات</th></tr></thead><tbody id="guests"></tbody></table></div><div id="empty-state" class="empty-state"><span>♙</span><h3>قائمة ضيوفك تبدأ هنا</h3><p>أضف أول ضيف، ثم اختر له مقعدًا في القاعة.</p></div>
 </section>
-<footer>مِيقاد <span>عناية بالتفاصيل. ترحيب يليق.</span></footer>
+<footer>مقعد <span>عناية بالتفاصيل. ترحيب يليق.</span></footer>
 </main>
 <dialog id="seat-dialog" aria-labelledby="seat-dialog-title"><h2 id="seat-dialog-title">إدارة المقعد</h2><p id="seat-description"></p><div class="dialog-actions"><button type="button" class="button primary" id="edit-seat-guest">تعديل الضيف</button><button type="button" class="button secondary" id="release-seat">إخلاء المقعد</button><button type="button" class="button secondary" id="close-seat">إغلاق</button></div></dialog>
 <dialog id="delete-dialog" aria-labelledby="delete-title"><h2 id="delete-title">حذف الضيف؟</h2><p id="delete-description"></p><div class="dialog-actions"><button type="button" class="button danger" id="confirm-delete">حذف الضيف</button><button type="button" class="button secondary" id="cancel-delete">إلغاء</button></div></dialog>
