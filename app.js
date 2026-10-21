@@ -5,6 +5,8 @@
   const uid = () => crypto.randomUUID();
   const fresh = () => ({version:2,nextRowId:4,rows:[1,2,3].map(id=>({id,name:`الصف ${id}`,seatCount:SIZE})),guests:[],delegations:[]});
   let state = fresh(), lastRaw = null, blocked = false, activeSeat = null, editingId = null, pending = null;
+  let selectedLocation=null, canvasZoom=1, guestView='table';
+  let workspacePrefs={event:'فعالية غير مسماة',hall:'القاعة الرئيسية',user:'مسؤول التنظيم'};
   let delegationEditingId=null, memberSequence=0;
   let movingId=null, draggedId=null, suppressClickUntil=0;
   const node = (tag,text,cls) => {const n=document.createElement(tag);n.textContent=text;if(cls)n.className=cls;return n;};
@@ -98,7 +100,7 @@
     const save=()=>{
       const next={...state,guests:state.guests.map(g=>g.id===id?{...g,rowId,seat}:other&&g.id===other.id?{...g,rowId:guest.rowId,seat:guest.seat}:g)};
       if(commit(next,other?`تم تبديل مقعدي ${guest.name} و${other.name}.`:`تم نقل ${guest.name} إلى ${row.name} · مقعد ${seat}.`)){
-        movingId=null;$('move-banner').hidden=true;
+        movingId=null;$('move-banner').hidden=true;selectSeat(rowId,seat);
         document.querySelector(`[data-seat-id="${key(rowId,seat)}"]`)?.focus({preventScroll:true});
       }
     };
@@ -130,6 +132,58 @@
     movingId=editingId;$('guest-dialog').close();location.hash='#dashboard';
     $('move-description').textContent='اختر كرسيًا لنقل الضيف إليه، أو كرسيًا مشغولًا لتبديل مقعدي الضيفين.';$('move-banner').hidden=false;
   };
+  function selectSeat(rowId,seat){selectedLocation={rowId,seat};renderSeatInspector();}
+  function renderSeatInspector(){
+    document.querySelectorAll('.selected-seat').forEach(b=>b.classList.remove('selected-seat'));
+    const row=state.rows.find(r=>r.id===selectedLocation?.rowId);
+    if(!row||selectedLocation.seat>row.seatCount){selectedLocation=null;$('selected-seat-number').textContent='—';$('selected-seat-badge').textContent='لم يُحدد';$('selected-guest-name').textContent='اختر مقعدًا من المخطط';$('selected-seat-location').textContent='تظهر بيانات الضيف وموقعه هنا.';$('selected-guest-details').replaceChildren();$('seat-inspector-actions').hidden=true;return;}
+    const {rowId,seat}=selectedLocation,g=state.guests.find(g=>g.rowId===rowId&&g.seat===seat);
+    document.querySelector(`[data-seat-id="${key(rowId,seat)}"]`)?.classList.add('selected-seat');
+    $('selected-seat-number').textContent=seat;$('selected-seat-badge').textContent=g?'محجوز':'متاح';$('selected-guest-name').textContent=g?.name||'مقعد متاح';$('selected-seat-location').textContent=`${row.name} · مقعد ${seat}`;
+    $('selected-guest-details').replaceChildren();
+    if(g)for(const [title,text] of [['المنصب',g.title],['الجهة',g.organization],['المرافقون',g.companions],['الملاحظات',g.notes]])$('selected-guest-details').append(node('dt',title),node('dd',text||'—'));
+    $('seat-inspector-actions').hidden=false;$('inspector-edit').textContent=g?'عرض وتعديل البيانات':'إضافة ضيف إلى المقعد';$('inspector-move').hidden=!g;$('inspector-release').hidden=!g;
+  }
+  $('inspector-edit').onclick=()=>{if(selectedLocation)openGuest(selectedLocation.rowId,selectedLocation.seat);};
+  $('inspector-move').onclick=()=>{const g=state.guests.find(g=>g.rowId===selectedLocation?.rowId&&g.seat===selectedLocation?.seat);if(g){movingId=g.id;$('move-description').textContent='اختر كرسيًا لنقل الضيف إليه، أو كرسيًا مشغولًا للتبديل.';$('move-banner').hidden=false;}};
+  $('inspector-release').onclick=()=>{const g=state.guests.find(g=>g.rowId===selectedLocation?.rowId&&g.seat===selectedLocation?.seat);if(g)confirm(`هل تريد إخلاء مقعد ${g.name} وإبقائه في قائمة الانتظار؟`,()=>commit({...state,guests:state.guests.map(item=>item.id===g.id?{...item,rowId:null,seat:null}:item)},'تم إخلاء المقعد مع الاحتفاظ بالضيف.'));};
+  function setZoom(value){canvasZoom=Math.max(.6,Math.min(1.8,Math.round(value*10)/10));document.querySelector('.conference-floor').style.zoom=canvasZoom;$('zoom-label').textContent=`${Math.round(canvasZoom*100)}%`;$('zoom-in').disabled=canvasZoom>=1.8;$('zoom-out').disabled=canvasZoom<=.6;}
+  $('zoom-in').onclick=()=>setZoom(canvasZoom+.1);$('zoom-out').onclick=()=>setZoom(canvasZoom-.1);$('zoom-reset').onclick=()=>setZoom(1);
+  function fullscreenLabel(){const active=document.fullscreenElement===$('seating-section')||$('seating-section').classList.contains('focus-workspace');$('workspace-fullscreen').setAttribute('aria-label',active?'الخروج من ملء الشاشة':'عرض المخطط بملء الشاشة');$('workspace-fullscreen').setAttribute('aria-pressed',String(active));}
+  $('workspace-fullscreen').onclick=async()=>{
+    const panel=$('seating-section');
+    if(document.fullscreenElement){await document.exitFullscreen();}
+    else if(panel.classList.contains('focus-workspace')){panel.classList.remove('focus-workspace');document.body.classList.remove('has-focus-workspace');}
+    else{try{if(!panel.requestFullscreen)throw Error('unsupported');await panel.requestFullscreen();}catch{panel.classList.add('focus-workspace');document.body.classList.add('has-focus-workspace');}}
+    fullscreenLabel();
+  };
+  document.addEventListener('fullscreenchange',fullscreenLabel);document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.querySelector('dialog[open]')){$('seating-section').classList.remove('focus-workspace');document.body.classList.remove('has-focus-workspace');fullscreenLabel();}});
+  function showGuestInLayout(g){location.hash='#seating-layout';showView();if(g.rowId!==null){selectSeat(g.rowId,g.seat);highlightGuest(g);}else message('notice','هذا الضيف بانتظار تخصيص مقعد.');}
+  function renderGlobalSearch(){
+    const q=$('global-search').value.trim().toLocaleLowerCase('ar');$('global-search-results').replaceChildren();$('global-search-results').hidden=!q;if(!q)return;
+    const matches=state.guests.filter(g=>`${g.name} ${g.organization}`.toLocaleLowerCase('ar').includes(q));
+    for(const g of matches){const button=node('button',`${g.name} — ${label(g)}`);button.type='button';button.onclick=()=>{showGuestInLayout(g);$('global-search-results').hidden=true;$('global-search').value='';};$('global-search-results').append(button);}
+    if(!matches.length)$('global-search-results').append(node('p','لا توجد نتائج مطابقة.','muted'));
+  }
+  $('global-search').oninput=renderGlobalSearch;document.addEventListener('click',e=>{if(!e.target.closest('.global-search'))$('global-search-results').hidden=true;});
+  function renderOverview(){
+    const waiting=state.guests.filter(g=>g.rowId===null),occupied=state.guests.length-waiting.length,capacity=state.rows.reduce((n,r)=>n+r.seatCount,0),percent=Math.round(occupied/capacity*100);
+    $('occupancy-percent').textContent=`${percent}%`;$('occupancy-ring').style.setProperty('--occupied-angle',`${occupied/capacity*360}deg`);$('occupancy-description').textContent=`${occupied} مقعدًا مشغولًا من أصل ${capacity} · ${capacity-occupied} مقعدًا متاحًا`;
+    $('layout-capacity').textContent=`${state.rows.length} صفوف · ${capacity} مقعدًا`;$('waiting-preview').replaceChildren();
+    for(const g of waiting.slice(0,3)){const item=node('div','','preview-guest');item.append(node('span',g.name.slice(0,1),'mini-avatar'),node('span',g.name),node('small','بانتظار مقعد'));$('waiting-preview').append(item);}
+    if(!waiting.length)$('waiting-preview').append(node('p',state.guests.length?'جميع الضيوف المسجلين لديهم مقاعد.':'لا يوجد ضيوف بانتظار التجليس.','muted'));
+    $('notification-text').textContent=waiting.length?`يوجد ${waiting.length} من الضيوف بانتظار تخصيص المقاعد.`:'لا يوجد ضيوف بانتظار تخصيص المقاعد.';$('notification-badge').textContent=waiting.length;$('notification-badge').hidden=!waiting.length;$('show-waiting').disabled=!waiting.length;
+  }
+  $('show-waiting').onclick=()=>{$('guest-seat-filter').value='waiting';location.hash='#guest-section';showView();renderManagement();$('notifications').open=false;};
+  function applyWorkspacePrefs(){document.querySelectorAll('[data-event-name]').forEach(n=>n.textContent=workspacePrefs.event);document.querySelectorAll('[data-user-name]').forEach(n=>n.textContent=workspacePrefs.user);$('user-initial').textContent=workspacePrefs.user.slice(0,1);document.querySelector('.stage span').textContent=workspacePrefs.hall;}
+  function openWorkspacePrefs(){$('event-name').value=workspacePrefs.event;$('hall-name').value=workspacePrefs.hall;$('user-name').value=workspacePrefs.user;$('workspace-preferences-error').hidden=true;$('workspace-preferences').showModal();}
+  $('edit-workspace').onclick=openWorkspacePrefs;$('user-settings').onclick=openWorkspacePrefs;$('close-workspace-preferences').onclick=()=>$('workspace-preferences').close();
+  $('workspace-preferences-form').onsubmit=e=>{e.preventDefault();const next={event:$('event-name').value.trim(),hall:$('hall-name').value.trim(),user:$('user-name').value.trim()};if(Object.values(next).some(v=>!v)){message('workspace-preferences-error','أدخل اسم الفعالية والقاعة والمستخدم.');return;}try{localStorage.setItem('miqadWorkspacePrefs',JSON.stringify(next));workspacePrefs=next;applyWorkspacePrefs();$('workspace-preferences').close();}catch{message('workspace-preferences-error','تعذّر حفظ إعدادات مساحة العمل.');}};
+  try{const prefs=JSON.parse(localStorage.getItem('miqadWorkspacePrefs')||'null');if(prefs&&['event','hall','user'].every(k=>typeof prefs[k]==='string'&&prefs[k].trim()))workspacePrefs=prefs;}catch{}
+  applyWorkspacePrefs();
+  function setGuestView(view,save=false){guestView=view==='cards'?'cards':'table';$('guest-cards').hidden=guestView!=='cards';$('guest-table-wrap').hidden=guestView!=='table';$('guest-view-cards').setAttribute('aria-pressed',String(guestView==='cards'));$('guest-view-table').setAttribute('aria-pressed',String(guestView==='table'));if(save)try{localStorage.setItem('miqadGuestView',guestView);}catch{}}
+  $('guest-view-cards').onclick=()=>setGuestView('cards',true);$('guest-view-table').onclick=()=>setGuestView('table',true);try{setGuestView(localStorage.getItem('miqadGuestView'));}catch{setGuestView('table');}
+  $('guest-category-filter').onchange=renderManagement;$('guest-seat-filter').onchange=renderManagement;
   function render(){
     $('total-count').textContent=state.guests.length;
     $('vip-count').textContent=state.guests.filter(g=>g.category==='vip').length;
@@ -171,10 +225,11 @@
         chairs.append(b);
       }section.append(chairs);$('seats').append(section);
     }
-    renderSearch();renderManagement();
+    renderSearch();renderManagement();renderOverview();renderSeatInspector();renderGlobalSearch();
   }
   function fillGuest(g){$('name').value=g?.name||'';$('title').value=g?.title||'';$('organization').value=g?.organization||'';$('vip').checked=g?.category==='vip';$('notes').value=g?.notes||'';$('companions').value=g?.companions||'';}
   function openGuest(rowId,seat,id){
+    if(rowId!==null)selectSeat(rowId,seat);
     const g=id?state.guests.find(g=>g.id===id):state.guests.find(g=>g.rowId===rowId&&g.seat===seat);
     activeSeat=g?{rowId:g.rowId,seat:g.seat}:{rowId,seat};editingId=g?.id??null;
     $('guest-form').reset();$('name').setCustomValidity('');$('guest-error').hidden=true;
@@ -208,8 +263,12 @@
   function delegationFor(id){return state.delegations.find(d=>d.memberIds.includes(id));}
   function renderManagement(){
     $('guest-cards').replaceChildren();const q=$('management-search').value.trim().toLocaleLowerCase('ar');
-    const guests=state.guests.filter(g=>`${g.name} ${g.title} ${g.organization} ${delegationFor(g.id)?.name||''}`.toLocaleLowerCase('ar').includes(q));
+    const guests=state.guests.filter(g=>`${g.name} ${g.title} ${g.organization} ${delegationFor(g.id)?.name||''}`.toLocaleLowerCase('ar').includes(q)&&($('guest-category-filter').value==='all'||g.category===$('guest-category-filter').value)&&($('guest-seat-filter').value==='all'||$('guest-seat-filter').value==='waiting'&&g.rowId===null||$('guest-seat-filter').value==='seated'&&g.rowId!==null));
+    $('guest-table-body').replaceChildren();$('directory-count').textContent=`عرض ${guests.length} من أصل ${state.guests.length} ضيفًا`;$('guest-table-empty').hidden=guests.length>0;
     for(const g of guests){
+      const tr=node('tr',''),person=node('td',''),personWrap=node('div','','table-person');personWrap.append(node('span',g.name.slice(0,1),'mini-avatar'),node('span',g.name));person.append(personWrap);
+      const org=node('td',g.organization||'—');org.append(node('small',g.title||'—'));const category=node('td','');category.append(node('span',g.category==='vip'?'كبار الشخصيات':'ضيف',g.category==='vip'?'tag vip':'tag'));const actions=node('td',''),tableEdit=node('button','إدارة','table-edit');tableEdit.type='button';tableEdit.setAttribute('aria-label',`إدارة ${g.name}`);tableEdit.onclick=()=>openGuest(g.rowId,g.seat,g.id);actions.append(tableEdit);
+      tr.append(person,org,category,node('td',label(g)),node('td',delegationFor(g.id)?.name||'—'),actions);$('guest-table-body').append(tr);
       const card=node('article','','guest-card');card.dataset.guestId=g.id;const d=delegationFor(g.id);
       card.append(node('h3',g.name),node('span',g.category==='vip'?'كبار الشخصيات':'ضيف','tag'));
       const list=node('dl','');for(const [name,value] of [['المنصب',g.title],['الجهة',g.organization],['المرافقون',g.companions],['الصف ورقم الكرسي',label(g)],['الملاحظات',g.notes],['الوفد',d?`${d.name} · ${d.leaderId===g.id?'رئيس الوفد':'عضو'}`:'']]){list.append(node('dt',name),node('dd',value||'—'));}card.append(list);
@@ -307,9 +366,9 @@
     const management=route==='guest-section'||route==='reports',layout=route==='dashboard'||route==='seating-layout';
     $('dashboard').hidden=!layout;$('guest-section').hidden=!management;$('secondary-view').hidden=layout||management;
     $('management-details').hidden=route==='reports';
-    $('dashboard-stats').hidden=route!=='dashboard';
+    $('dashboard-stats').hidden=route!=='dashboard';$('dashboard-overview').hidden=route!=='dashboard';$('dashboard-insights').hidden=route!=='dashboard';
     $('management-title').textContent=route==='reports'?routes.reports:routes['guest-section'];
-    $('layout-view-title').textContent=routes[layout?route:'dashboard'];$('current-view-title').textContent=routes[route];
+    $('layout-view-title').textContent=routes['seating-layout'];$('current-view-title').textContent=routes[route];
     $('settings-shortcut').hidden=route!=='settings';
     if(!layout&&!management){
       $('secondary-title').textContent=routes[route];$('secondary-description').textContent=route==='settings'?'تخصيص الصفوف والكراسي في القاعة.':'هذا القسم غير متاح حاليًا.';
