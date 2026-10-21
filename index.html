@@ -15,7 +15,8 @@
 <nav aria-label="التنقل الرئيسي">
 <a href="#dashboard">◈ <span>لوحة التحكم</span></a>
 <a href="#guest-section">♙ <span>إدارة الضيوف</span></a>
-<a href="#seating-section">▦ <span>توزيع المقاعد</span></a>
+<a href="#manual-title">＋ <span>توزيع الضيوف</span></a>
+<a href="#seat-search-section">⌕ <span>بحث عن المقعد</span></a>
 </nav>
 <div class="sidebar-note"><span class="status-dot"></span> مساحة تنظيمك، بكل اتّزان<p>إدارة تفاصيل الضيافة من الوصول إلى المقعد.</p></div>
 </aside>
@@ -30,21 +31,28 @@
 <article class="stat"><span class="stat-icon">▦</span><p>المقاعد المشغولة</p><strong id="occupied-count">0</strong><small>من أصل 15 مقعدًا</small></article>
 <article class="stat"><span class="stat-icon gold">◷</span><p>بانتظار التجليس</p><strong id="waiting-count">0</strong><small>ضيف دون مقعد</small></article>
 </section>
-<section class="manual-section" aria-labelledby="manual-title"><div class="section-title"><h2 id="manual-title">١. قائمة الأشخاص · إضافة يدوية</h2><a href="#seating-section" class="button secondary">الانتقال إلى الكراسي ←</a></div><div class="manual-grid"><section class="panel form-panel"><div class="panel-heading"><div><p class="eyebrow">ضيافة تبدأ بالتفاصيل</p><h2 id="form-title">إضافة شخص يدويًا</h2></div><span class="stat-icon">＋</span></div>
+<section class="manual-section" aria-labelledby="manual-title"><div class="section-title"><h2 id="manual-title">توزيع الضيوف · إضافة الضيوف</h2><a href="#seating-section" class="button secondary">الانتقال إلى الكراسي ←</a></div><div class="manual-grid"><section class="panel form-panel"><div class="panel-heading"><div><p class="eyebrow">ضيافة تبدأ بالتفاصيل</p><h2 id="form-title">إضافة شخص يدويًا</h2></div><span class="stat-icon">＋</span></div>
 <form id="guest-form"><label for="name">اسم الضيف <span class="required">*</span></label><input id="name" name="name" placeholder="الاسم الكامل" required maxlength="120" autocomplete="name">
 <label for="title">المسمى الوظيفي أو الجهة</label><input id="title" name="title" placeholder="مثال: مدير العلاقات العامة" maxlength="160" autocomplete="organization-title">
 <label for="category">فئة الضيف</label><select id="category" name="category"><option value="regular">ضيف</option><option value="vip">كبار الشخصيات · VIP</option></select>
 <label for="guest-seat">المقعد</label><select id="guest-seat" name="seat"></select>
 <div class="form-actions"><button class="button primary" type="submit" id="save-guest">إضافة الضيف</button><button class="button secondary" type="button" id="cancel-edit" hidden>إلغاء التعديل</button></div>
-<p class="form-hint">تُحفظ البيانات تلقائيًا في هذا المتصفح على هذا الجهاز.</p></form></section><section class="panel guest-panel" id="guest-section"><div class="panel-heading"><div><p class="eyebrow">قائمة الحضور</p><h2>قائمة الأشخاص <span id="list-count" class="count">0</span></h2></div><span class="muted">تفاصيل واضحة لاستقبال أفضل</span></div>
+<p class="form-hint">تُحفظ البيانات تلقائيًا في هذا المتصفح على هذا الجهاز.</p></form></section>
+</div></section>
+<section class="panel seating-panel" id="seating-section"><div class="panel-heading"><div><p class="eyebrow">توزيع مدروس، استقبال يليق</p><h2>توزيع الضيوف على الكراسي</h2></div><span class="pill">منصة المؤتمر · 15 كرسيًا</span></div>
+<div class="seat-controls"><div class="seating-toolbar"><label for="assignment-guest">الضيف المراد تجليسه</label><select id="assignment-guest"><option value="">تلقائيًا: أول ضيف ينتظر</option></select><p class="muted">اختر مقعدًا فارغًا للتجليس، أو مقعدًا مشغولًا لإدارته.</p></div></div>
+<div class="conference-scroll" tabindex="0" role="region" aria-label="منصة المؤتمر، مرّر أفقيًا لاستعراض الكراسي"><div class="conference-floor"><div class="stage">منصة المؤتمر<span>الصف الأمامي · 15 كرسيًا</span></div><div class="seats" id="seats" aria-label="15 كرسيًا متجاورًا أمام منصة المؤتمر"></div></div></div><p class="scroll-hint">اسحب المخطط أفقيًا لاستعراض جميع الكراسي، واضغط على كرسي لتوزيع الضيوف.</p>
+<div class="legend"><span><i></i> متاح</span><span><i class="occupied"></i> محجوز</span><span><i class="vip"></i> كبار الشخصيات</span></div>
+</section>
+<section class="panel seat-lookup-panel" id="seat-search-section" aria-labelledby="seat-search-title">
+<div class="panel-heading"><div><p class="eyebrow">اعرف مكان ضيفك</p><h2 id="seat-search-title">بحث عن المقعد</h2></div><span class="pill">بحث فقط</span></div>
+<p class="muted">اكتب اسم الضيف أو الجهة أو رقم الكرسي لعرض المقعد واسم صاحبه.</p>
+<div class="seat-search"><label for="seat-search">اسم الضيف أو رقم المقعد</label><input type="search" id="seat-search" placeholder="ابحث باسم الضيف أو رقم المقعد…" autocomplete="off"><p id="seat-search-result" class="muted" role="status" aria-live="polite"></p></div>
+<div id="seat-search-results" class="seat-search-results" aria-label="نتائج البحث عن المقعد"></div>
+</section>
+<section class="panel guest-panel" id="guest-section"><div class="panel-heading"><div><p class="eyebrow">قائمة الحضور</p><h2>قائمة الأشخاص <span id="list-count" class="count">0</span></h2></div><span class="muted">تفاصيل واضحة لاستقبال أفضل</span></div>
 <div class="filters"><label class="search-label" for="search">البحث عن ضيف<input type="search" id="search" placeholder="ابحث بالاسم أو الجهة…"></label><label for="filter">عرض الفئة<select id="filter"><option value="all">جميع الضيوف</option><option value="vip">كبار الشخصيات</option><option value="waiting">بانتظار التجليس</option><option value="seated">تم التجليس</option></select></label></div>
 <div class="table-scroll"><table><thead><tr><th scope="col">الضيف</th><th scope="col">الفئة</th><th scope="col">المقعد</th><th scope="col">الحالة</th><th scope="col">الإجراءات</th></tr></thead><tbody id="guests"></tbody></table></div><div id="empty-state" class="empty-state"><span>♙</span><h3>قائمة ضيوفك تبدأ هنا</h3><p>أضف أول ضيف، ثم اختر له مقعدًا في القاعة.</p></div>
-</section>
-</div></section>
-<section class="panel seating-panel" id="seating-section"><div class="panel-heading"><div><p class="eyebrow">توزيع مدروس، استقبال يليق</p><h2>٢. قائمة الكراسي</h2></div><span class="pill">منصة المؤتمر · 15 كرسيًا</span></div>
-<div class="seat-controls"><div class="seating-toolbar"><label for="assignment-guest">الضيف المراد تجليسه</label><select id="assignment-guest"><option value="">تلقائيًا: أول ضيف ينتظر</option></select><p class="muted">اختر مقعدًا فارغًا للتجليس، أو مقعدًا مشغولًا لإدارته.</p></div><div class="seat-search"><label for="seat-search">البحث في الكراسي</label><input type="search" id="seat-search" placeholder="اسم الضيف أو رقم الكرسي…"><p id="seat-search-result" class="muted" role="status" aria-live="polite"></p></div></div>
-<div class="conference-scroll" tabindex="0" role="region" aria-label="منصة المؤتمر، مرّر أفقيًا لاستعراض الكراسي"><div class="conference-floor"><div class="stage">منصة المؤتمر<span>الصف الأمامي · 15 كرسيًا</span></div><div class="seats" id="seats" aria-label="15 كرسيًا متجاورًا أمام منصة المؤتمر"></div></div></div><p class="scroll-hint">اسحب المخطط أفقيًا لاستعراض جميع الكراسي. نتائج البحث تُميّز داخل الصف.</p>
-<div class="legend"><span><i></i> متاح</span><span><i class="occupied"></i> محجوز</span><span><i class="vip"></i> كبار الشخصيات</span></div>
 </section>
 <footer>مقعد <span>عناية بالتفاصيل. ترحيب يليق.</span></footer>
 </main>

@@ -79,16 +79,27 @@
   function renderSeatSearch() {
     const query = $('seat-search').value.trim().toLocaleLowerCase('ar');
     const normalized = query.replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
-    let matches = 0;
-    [...$('seats').children].forEach((button, index) => {
-      const seat = index + 1;
-      const guest = guests.find(g => g.seat === seat);
-      const match = Boolean(query) && (String(seat) === normalized || Boolean(guest && `${guest.name} ${guest.title}`.toLocaleLowerCase('ar').includes(query)));
-      button.classList.toggle('search-match', match);
-      button.classList.toggle('search-dim', Boolean(query) && !match);
-      if (match) matches++;
+    $('seat-search-results').replaceChildren();
+    if (!query) {
+      $('seat-search-result').textContent = 'أدخل اسمًا أو رقم مقعد لبدء البحث.';
+      return;
+    }
+    const matches = guests.filter(g => `${g.name} ${g.title}`.toLocaleLowerCase('ar').includes(query) || g.seat !== null && String(g.seat) === normalized);
+    matches.forEach(g => {
+      const card = node('article', '', 'seat-result');
+      card.append(node('strong', g.name), node('span', g.seat === null ? 'بانتظار التجليس · لم يُخصص مقعد' : `مقعد ${g.seat}`, 'seat-result-number'));
+      if (g.title) card.append(node('small', g.title));
+      $('seat-search-results').append(card);
     });
-    $('seat-search-result').textContent = query ? (matches ? `${matches} كرسي مطابق · اضغط على الكرسي لعرض التفاصيل` : 'لا توجد كراسي مطابقة لهذا البحث') : 'ابحث باسم الشخص أو الجهة أو رقم الكرسي.';
+    // A seat-number search also reports an empty chair without assigning anyone.
+    const number = Number(normalized);
+    if (!matches.length && /^\d+$/.test(normalized) && number >= 1 && number <= CAPACITY) {
+      const card = node('article', '', 'seat-result');
+      card.append(node('strong', `مقعد ${number}`), node('span', 'متاح · لا يوجد ضيف مخصص لهذا المقعد'));
+      $('seat-search-results').append(card);
+    }
+    const count = $('seat-search-results').children.length;
+    $('seat-search-result').textContent = count ? `${count} نتيجة بحث` : 'لا توجد نتائج مطابقة لهذا البحث.';
   }
   function renderList() {
     const query = $('search').value.trim().toLocaleLowerCase('ar');
