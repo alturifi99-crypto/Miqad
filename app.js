@@ -3,8 +3,9 @@
   const KEY = 'miqadStateV2', LEGACY = 'miqadGuests', SIZE = 15;
   const $ = id => document.getElementById(id);
   const uid = () => crypto.randomUUID();
-  const fresh = () => ({version:2,nextRowId:4,rows:[1,2,3].map(id=>({id,name:`الصف ${id}`,seatCount:SIZE})),guests:[]});
+  const fresh = () => ({version:2,nextRowId:4,rows:[1,2,3].map(id=>({id,name:`الصف ${id}`,seatCount:SIZE})),guests:[],delegations:[]});
   let state = fresh(), lastRaw = null, blocked = false, activeSeat = null, editingId = null, pending = null;
+  let delegationEditingId=null, memberSequence=0;
   let movingId=null, draggedId=null, suppressClickUntil=0;
   const node = (tag,text,cls) => {const n=document.createElement(tag);n.textContent=text;if(cls)n.className=cls;return n;};
   const option = (value,text) => {const n=node('option',text);n.value=value;return n;};
@@ -18,16 +19,25 @@
     if(!Number.isInteger(data.nextRowId)||data.nextRowId<=Math.max(...rows))return false;
     for(const g of data.guests){
       if(typeof g.id!=='string'||ids.has(g.id)||typeof g.name!=='string'||!g.name.trim()||!['regular','vip'].includes(g.category)||['title','organization','notes'].some(k=>typeof g[k]!=='string'))return false;
+      if(g.companions!==undefined&&typeof g.companions!=='string')return false;
       ids.add(g.id);
       if(g.rowId===null && g.seat===null)continue;
       if(!rows.has(g.rowId)||!Number.isInteger(g.seat)||g.seat<1||g.seat>data.rows.find(r=>r.id===g.rowId).seatCount||seats.has(key(g.rowId,g.seat)))return false;
       seats.add(key(g.rowId,g.seat));
-    }return true;
+    }
+    if(!Array.isArray(data.delegations))return false;
+    const delegationIds=new Set(),members=new Set();
+    for(const d of data.delegations){
+      if(typeof d.id!=='string'||delegationIds.has(d.id)||typeof d.name!=='string'||!d.name.trim()||!Array.isArray(d.memberIds)||!d.memberIds.length||!d.memberIds.includes(d.leaderId))return false;
+      delegationIds.add(d.id);
+      for(const id of d.memberIds){if(!ids.has(id)||members.has(id))return false;members.add(id);}
+    }
+    return true;
   }
   function load(){
     try {
       lastRaw=localStorage.getItem(KEY);
-      if(lastRaw!==null){const data=JSON.parse(lastRaw);if(Array.isArray(data?.rows))data.rows=data.rows.map(r=>r&&typeof r==='object'?{...r,seatCount:r.seatCount===undefined?SIZE:r.seatCount}:r);if(!valid(data))throw Error();state=data;return;}
+      if(lastRaw!==null){const data=JSON.parse(lastRaw);if(Array.isArray(data?.rows))data.rows=data.rows.map(r=>r&&typeof r==='object'?{...r,seatCount:r.seatCount===undefined?SIZE:r.seatCount}:r);if(data.delegations===undefined)data.delegations=[];if(!valid(data))throw Error();state=data;return;}
       const raw=localStorage.getItem(LEGACY);
       if(raw===null)return;
       const old=JSON.parse(raw);
@@ -117,7 +127,7 @@
   $('guest-search').oninput=()=>renderSearch(true);
   $('cancel-move').onclick=()=>{movingId=null;$('move-banner').hidden=true;};
   $('start-move').onclick=()=>{
-    movingId=editingId;$('guest-dialog').close();
+    movingId=editingId;$('guest-dialog').close();location.hash='#dashboard';
     $('move-description').textContent='اختر كرسيًا لنقل الضيف إليه، أو كرسيًا مشغولًا لتبديل مقعدي الضيفين.';$('move-banner').hidden=false;
   };
   function render(){
@@ -160,9 +170,9 @@
         chairs.append(b);
       }section.append(chairs);$('seats').append(section);
     }
-    renderSearch();
+    renderSearch();renderManagement();
   }
-  function fillGuest(g){$('name').value=g?.name||'';$('title').value=g?.title||'';$('organization').value=g?.organization||'';$('vip').checked=g?.category==='vip';$('notes').value=g?.notes||'';}
+  function fillGuest(g){$('name').value=g?.name||'';$('title').value=g?.title||'';$('organization').value=g?.organization||'';$('vip').checked=g?.category==='vip';$('notes').value=g?.notes||'';$('companions').value=g?.companions||'';}
   function openGuest(rowId,seat,id){
     const g=id?state.guests.find(g=>g.id===id):state.guests.find(g=>g.rowId===rowId&&g.seat===seat);
     activeSeat=g?{rowId:g.rowId,seat:g.seat}:{rowId,seat};editingId=g?.id??null;
@@ -182,7 +192,7 @@
     e.preventDefault();const name=$('name').value.trim();if(!name){$('name').setCustomValidity('اكتب اسم الضيف.');$('name').reportValidity();return;}
     if(activeSeat.rowId!==null&&state.guests.some(g=>g.rowId===activeSeat.rowId&&g.seat===activeSeat.seat&&g.id!==editingId)){message('guest-error','الكرسي محجوز لضيف آخر.');return;}
     const old=state.guests.find(g=>g.id===editingId);
-    const g={...old,id:editingId??uid(),name,title:$('title').value.trim(),organization:$('organization').value.trim(),notes:$('notes').value.trim(),category:$('vip').checked?'vip':'regular',...activeSeat};
+    const g={...old,id:editingId??uid(),name,title:$('title').value.trim(),organization:$('organization').value.trim(),notes:$('notes').value.trim(),companions:$('companions').value.trim(),category:$('vip').checked?'vip':'regular',...activeSeat};
     const next={...state,guests:old?state.guests.map(item=>item.id===g.id?g:item):[...state.guests,g]};
     const save=()=>{if(commit(next,'تم حفظ بيانات الضيف.'))$('guest-dialog').close();else message('guest-error','لم يتم حفظ التغيير. راجع تنبيه التخزين وأعد المحاولة.');};
     if(old)confirm('هل تريد حفظ تعديلات بيانات هذا الضيف وتخصيص مقعده؟',save);else save();
@@ -194,6 +204,75 @@
   $('confirm-action').onclick=()=>{const action=pending;pending=null;$('confirm-dialog').close();action?.();};
   $('cancel-action').onclick=()=>{$('confirm-dialog').close();pending=null;};
   $('confirm-dialog').addEventListener('cancel',()=>{pending=null;});
+  function delegationFor(id){return state.delegations.find(d=>d.memberIds.includes(id));}
+  function renderManagement(){
+    $('guest-cards').replaceChildren();const q=$('management-search').value.trim().toLocaleLowerCase('ar');
+    const guests=state.guests.filter(g=>`${g.name} ${g.title} ${g.organization} ${delegationFor(g.id)?.name||''}`.toLocaleLowerCase('ar').includes(q));
+    for(const g of guests){
+      const card=node('article','','guest-card');card.dataset.guestId=g.id;const d=delegationFor(g.id);
+      card.append(node('h3',g.name),node('span',g.category==='vip'?'كبار الشخصيات':'ضيف','tag'));
+      const list=node('dl','');for(const [name,value] of [['المنصب',g.title],['الجهة',g.organization],['المرافقون',g.companions],['الصف ورقم الكرسي',label(g)],['الملاحظات',g.notes],['الوفد',d?`${d.name} · ${d.leaderId===g.id?'رئيس الوفد':'عضو'}`:'']]){list.append(node('dt',name),node('dd',value||'—'));}card.append(list);
+      const edit=node('button','عرض وتعديل البيانات','button secondary');edit.type='button';edit.onclick=()=>openGuest(g.rowId,g.seat,g.id);card.append(edit);$('guest-cards').append(card);
+    }
+    if(!guests.length)$('guest-cards').append(node('p',state.guests.length?'لا توجد نتائج مطابقة.':'لا يوجد ضيوف مسجلون بعد. أضف ضيفًا من الكرسي أو أضف وفدًا.','muted'));
+    $('delegations').replaceChildren();
+    for(const d of state.delegations){
+      const card=node('article','','delegation-card');card.dataset.delegationId=d.id;card.append(node('h3',d.name));
+      const list=node('ul','');for(const id of d.memberIds){const g=state.guests.find(g=>g.id===id);list.append(node('li',`${g.name} · ${d.leaderId===id?'رئيس الوفد':'عضو'} · ${label(g)}`));}card.append(list);
+      const edit=node('button','تعديل الوفد','button secondary');edit.type='button';edit.onclick=()=>openDelegation(d);card.append(edit);$('delegations').append(card);
+    }
+    if(!state.delegations.length)$('delegations').append(node('p','لم تتم إضافة وفود بعد.','muted'));
+  }
+  $('management-search').oninput=renderManagement;
+  function memberSeatOptions(){
+    const groups=[...$('delegation-members').children],allowed=new Set(groups.map(group=>group.querySelector('.member-existing').value).filter(Boolean));
+    for(const group of groups){
+      const select=group.querySelector('.member-seat'),selected=select.value;select.replaceChildren(option('','بانتظار تخصيص مقعد'));
+      for(const r of state.rows)for(let seat=1;seat<=r.seatCount;seat++){
+        const g=state.guests.find(g=>g.rowId===r.id&&g.seat===seat),o=option(key(r.id,seat),`${r.name} · مقعد ${seat}${g&&!allowed.has(g.id)?' · محجوز':''}`);o.disabled=Boolean(g&&!allowed.has(g.id));select.append(o);
+      }select.value=selected;
+    }
+  }
+  function addMember(guest,leader=false){
+    const group=node('fieldset','','delegation-member');const index=++memberSequence;group.append(node('legend',`عضو الوفد`));
+    const existing=node('select','','member-existing');existing.id=`member-existing-${index}`;existing.append(option('','ضيف جديد'));
+    for(const g of state.guests){const d=delegationFor(g.id),o=option(g.id,`${g.name}${d&&d.id!==delegationEditingId?' · ضمن وفد آخر':''}`);o.disabled=Boolean(d&&d.id!==delegationEditingId);existing.append(o);}
+    function field(labelText,element){const label=node('label',labelText);label.htmlFor=element.id;group.append(label,element);}
+    field('ضيف موجود أو جديد',existing);
+    const name=node('input','','member-name');name.id=`member-name-${index}`;name.required=true;name.maxLength=120;field('اسم العضو *',name);
+    const title=node('input','','member-title');title.id=`member-title-${index}`;title.maxLength=160;field('المنصب',title);
+    const organization=node('input','','member-organization');organization.id=`member-organization-${index}`;organization.maxLength=160;field('الجهة',organization);
+    const category=node('select','','member-category');category.id=`member-category-${index}`;category.append(option('regular','ضيف'),option('vip','كبار الشخصيات'));field('الفئة',category);
+    const seat=node('select','','member-seat');seat.id=`member-seat-${index}`;field('الصف والكرسي',seat);
+    const lead=node('input','','member-leader');lead.type='radio';lead.name='delegation-leader';lead.id=`member-leader-${index}`;lead.required=true;lead.checked=leader;const leadLabel=node('label','رئيس الوفد','checkbox-label');leadLabel.htmlFor=lead.id;leadLabel.prepend(lead);group.append(leadLabel);
+    const remove=node('button','إزالة العضو من نموذج الوفد','button secondary');remove.type='button';remove.onclick=()=>{if($('delegation-members').children.length<=1)return;const wasLeader=lead.checked;group.remove();if(wasLeader)$('delegation-members').querySelector('.member-leader').checked=true;memberSeatOptions();};group.append(remove);
+    const fill=g=>{name.value=g?.name||'';title.value=g?.title||'';organization.value=g?.organization||'';category.value=g?.category||'regular';memberSeatOptions();seat.value=g?.rowId!=null?key(g.rowId,g.seat):'';};
+    existing.onchange=()=>fill(state.guests.find(g=>g.id===existing.value));
+    $('delegation-members').append(group);existing.value=guest?.id||'';fill(guest);
+  }
+  function openDelegation(d){
+    delegationEditingId=d?.id??null;memberSequence=0;$('delegation-form').reset();$('delegation-name').value=d?.name||'';$('delegation-error').hidden=true;$('delegation-members').replaceChildren();$('delegation-dialog-title').textContent=d?'تعديل الوفد':'إضافة وفد كامل';
+    if(d)for(const id of d.memberIds)addMember(state.guests.find(g=>g.id===id),id===d.leaderId);else addMember(null,true);
+    memberSeatOptions();$('delegation-dialog').showModal();
+  }
+  $('add-delegation').onclick=()=>openDelegation();$('add-delegation-member').onclick=()=>addMember();$('cancel-delegation').onclick=()=>$('delegation-dialog').close();
+  $('delegation-form').onsubmit=e=>{
+    e.preventDefault();const name=$('delegation-name').value.trim();if(!name){message('delegation-error','اكتب اسم الوفد.');return;}
+    const groups=[...$('delegation-members').children],chosen=new Set(),reserved=new Set(),members=[];let leaderId=null;
+    const editable=new Set(groups.map(group=>group.querySelector('.member-existing').value).filter(Boolean));
+    for(const group of groups){
+      const id=group.querySelector('.member-existing').value||uid(),old=state.guests.find(g=>g.id===id),other=delegationFor(id),memberName=group.querySelector('.member-name').value.trim();
+      if(!memberName||chosen.has(id)||other&&other.id!==delegationEditingId){message('delegation-error','تحقق من أسماء الأعضاء؛ لا يمكن تكرار الضيف أو إسناده إلى وفدين.');return;}chosen.add(id);
+      const location=group.querySelector('.member-seat').value;let rowId=null,seat=null;
+      if(location){[rowId,seat]=location.split(':').map(Number);const row=state.rows.find(r=>r.id===rowId);if(!row||!Number.isInteger(seat)||seat<1||seat>row.seatCount||reserved.has(location)||state.guests.some(g=>g.rowId===rowId&&g.seat===seat&&!editable.has(g.id))){message('delegation-error','يوجد مقعد محجوز أو مكرر. اختر مقعدًا مختلفًا لكل عضو.');return;}reserved.add(location);}
+      members.push({...old,id,name:memberName,title:group.querySelector('.member-title').value.trim(),organization:group.querySelector('.member-organization').value.trim(),category:group.querySelector('.member-category').value,companions:old?.companions||'',notes:old?.notes||'',rowId,seat});
+      if(group.querySelector('.member-leader').checked)leaderId=id;
+    }
+    if(!members.length||!leaderId){message('delegation-error','أضف عضوًا واحدًا على الأقل وحدد رئيس الوفد.');return;}
+    const delegation={id:delegationEditingId??uid(),name,leaderId,memberIds:members.map(g=>g.id)},updated=new Map(members.map(g=>[g.id,g]));
+    const next={...state,guests:[...state.guests.map(g=>updated.get(g.id)||g),...members.filter(g=>!state.guests.some(old=>old.id===g.id))],delegations:delegationEditingId?state.delegations.map(d=>d.id===delegationEditingId?delegation:d):[...state.delegations,delegation]};
+    if(commit(next,'تم حفظ الوفد وأعضائه ومقاعدهم.'))$('delegation-dialog').close();else message('delegation-error','تعذّر حفظ الوفد. لم يُعتمد أي جزء من التغيير؛ راجع تنبيه التخزين.');
+  };
   function rowInputs(){
     const count=Number($('row-count').value);if(!Number.isInteger(count)||count<1||count>50)return;
     const current=[...$('row-names').querySelectorAll('.row-setting')].map(group=>({name:group.querySelector('[data-field="name"]').value,seatCount:group.querySelector('[data-field="count"]').value}));

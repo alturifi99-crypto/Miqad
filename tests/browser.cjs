@@ -30,7 +30,7 @@ const assert=require('node:assert/strict');
  await chair(3,15).click();const id=(await snapshot()).guests[1].id;await page.locator('#waiting-guest').selectOption(id);await page.locator('#save-guest').click();await page.locator('#confirm-action').click();assert.equal(await chair(3,15).locator('span').textContent(),'سارة');
  await page.locator('.sidebar nav a[href="#guest-section"]').click();await page.locator('#guest-section').waitFor({state:'visible'});
  assert.equal(await page.locator('#dashboard').isVisible(),false);assert.equal(await page.locator('#guest-section .stats').isVisible(),true);
- assert.equal(await page.locator('#guest-section input, #guest-section table, #guest-section .stage, #guest-section .seat').count(),0);
+ assert.equal(await page.locator('#guest-section .stage, #guest-section .seat').count(),0);
  await page.locator('.sidebar nav a[href="#dashboard"]').click();await page.locator('#dashboard').waitFor({state:'visible'});
  await page.locator('#open-settings').click();await page.locator('#row-name-0').fill('الصف الرئاسي');await page.getByRole('button',{name:'حفظ الإعدادات',exact:true}).click();assert.equal(await chair(1,1).locator('span').textContent(),'أحمد المعدل');
  await page.locator('#open-settings').click();await page.locator('#row-count').fill('2');await page.getByRole('button',{name:'حفظ الإعدادات',exact:true}).click();await page.locator('#cancel-action').click();assert.equal((await snapshot()).rows.length,3);
