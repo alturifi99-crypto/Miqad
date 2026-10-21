@@ -316,14 +316,21 @@
     document.querySelectorAll('.sidebar nav a').forEach(a=>{if(a.hash===`#${route}`)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
   }
   $('settings-shortcut').onclick=()=>$('open-settings').click();
+  const mobileSidebar=matchMedia('(max-width:700px)');
   function setSidebar(collapsed,save=false){
     document.body.classList.toggle('sidebar-collapsed',collapsed);
+    const open=mobileSidebar.matches&&!collapsed;document.body.classList.toggle('mobile-sidebar-open',open);$('sidebar-backdrop').hidden=!open;$('app-main').inert=open;
     const text=collapsed?'توسيع القائمة الجانبية':'طي القائمة الجانبية';
     $('sidebar-toggle').setAttribute('aria-expanded',String(!collapsed));$('sidebar-toggle').setAttribute('aria-label',text);$('sidebar-toggle').title=text;
     if(save)try{localStorage.setItem('miqadSidebarCollapsed',String(collapsed));}catch{/* Navigation remains usable when preference storage is unavailable. */}
   }
-  let collapsed=false;try{collapsed=localStorage.getItem('miqadSidebarCollapsed')==='true';}catch{}
+  function sidebarPreference(){try{return localStorage.getItem('miqadSidebarCollapsed')==='true';}catch{return false;}}
+  let collapsed=mobileSidebar.matches?true:sidebarPreference();
   setSidebar(collapsed);$('sidebar-toggle').onclick=()=>setSidebar(!document.body.classList.contains('sidebar-collapsed'),true);
+  $('sidebar-backdrop').onclick=()=>{setSidebar(true,true);$('sidebar-toggle').focus();};
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.body.classList.contains('mobile-sidebar-open')&&!document.querySelector('dialog[open]')){setSidebar(true,true);$('sidebar-toggle').focus();}});
+  document.querySelectorAll('.sidebar nav a').forEach(a=>a.addEventListener('click',()=>{if(mobileSidebar.matches)setSidebar(true,true);}));
+  mobileSidebar.addEventListener('change',()=>setSidebar(mobileSidebar.matches?true:sidebarPreference()));
   window.addEventListener('hashchange',showView);
   showView();
   load();render();
