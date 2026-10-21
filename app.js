@@ -3,7 +3,7 @@
   const KEY = 'miqadStateV2', LEGACY = 'miqadGuests', SIZE = 15;
   const $ = id => document.getElementById(id);
   const uid = () => crypto.randomUUID();
-  const fresh = () => ({version:2,nextRowId:4,rows:[1,2,3].map(id=>({id,name:`الصف ${id}`})),guests:[]});
+  const fresh = () => ({version:2,nextRowId:4,rows:[1,2,3].map(id=>({id,name:`الصف ${id}`,seatCount:SIZE})),guests:[]});
   let state = fresh(), lastRaw = null, blocked = false, activeSeat = null, editingId = null, pending = null;
   const node = (tag,text,cls) => {const n=document.createElement(tag);n.textContent=text;if(cls)n.className=cls;return n;};
   const option = (value,text) => {const n=node('option',text);n.value=value;return n;};
@@ -13,20 +13,20 @@
   function valid(data){
     if(data?.version!==2 || !Array.isArray(data.rows) || !data.rows.length || data.rows.length>50 || !Array.isArray(data.guests))return false;
     const rows=new Set(),ids=new Set(),seats=new Set();
-    for(const r of data.rows){if(!Number.isInteger(r.id)||r.id<1||rows.has(r.id)||typeof r.name!=='string'||!r.name.trim())return false;rows.add(r.id);}
+    for(const r of data.rows){if(!Number.isInteger(r.id)||r.id<1||rows.has(r.id)||typeof r.name!=='string'||!r.name.trim()||!Number.isInteger(r.seatCount)||r.seatCount<1||r.seatCount>100)return false;rows.add(r.id);}
     if(!Number.isInteger(data.nextRowId)||data.nextRowId<=Math.max(...rows))return false;
     for(const g of data.guests){
       if(typeof g.id!=='string'||ids.has(g.id)||typeof g.name!=='string'||!g.name.trim()||!['regular','vip'].includes(g.category)||['title','organization','notes'].some(k=>typeof g[k]!=='string'))return false;
       ids.add(g.id);
       if(g.rowId===null && g.seat===null)continue;
-      if(!rows.has(g.rowId)||!Number.isInteger(g.seat)||g.seat<1||g.seat>SIZE||seats.has(key(g.rowId,g.seat)))return false;
+      if(!rows.has(g.rowId)||!Number.isInteger(g.seat)||g.seat<1||g.seat>data.rows.find(r=>r.id===g.rowId).seatCount||seats.has(key(g.rowId,g.seat)))return false;
       seats.add(key(g.rowId,g.seat));
     }return true;
   }
   function load(){
     try {
       lastRaw=localStorage.getItem(KEY);
-      if(lastRaw!==null){const data=JSON.parse(lastRaw);if(!valid(data))throw Error();state=data;return;}
+      if(lastRaw!==null){const data=JSON.parse(lastRaw);if(Array.isArray(data?.rows))data.rows=data.rows.map(r=>r&&typeof r==='object'?{...r,seatCount:r.seatCount===undefined?SIZE:r.seatCount}:r);if(!valid(data))throw Error();state=data;return;}
       const raw=localStorage.getItem(LEGACY);
       if(raw===null)return;
       const old=JSON.parse(raw);
@@ -56,12 +56,12 @@
     $('vip-count').textContent=state.guests.filter(g=>g.category==='vip').length;
     $('occupied-count').textContent=state.guests.filter(g=>g.rowId!==null).length;
     $('waiting-count').textContent=state.guests.filter(g=>g.rowId===null).length;
-    $('capacity-label').textContent=`من أصل ${state.rows.length*SIZE} مقعدًا`;
+    $('capacity-label').textContent=`من أصل ${state.rows.reduce((total,row)=>total+row.seatCount,0)} مقعدًا`;
     $('seats').replaceChildren();
     for(const row of state.rows){
       const section=node('section','','conference-row');section.append(node('h3',row.name));
-      const chairs=node('div','','seats');chairs.setAttribute('aria-label',row.name);
-      for(let seat=1;seat<=SIZE;seat++){
+      const chairs=node('div','','seats');chairs.setAttribute('aria-label',row.name);chairs.style.setProperty('--seat-count',row.seatCount);chairs.style.minWidth=row.seatCount>15?`${row.seatCount*48}px`:'0';
+      for(let seat=1;seat<=row.seatCount;seat++){
         const g=state.guests.find(g=>g.rowId===row.id&&g.seat===seat);
         const b=node('button','',`seat${g?' taken':''}${g?.category==='vip'?' vip-seat':''}`);b.type='button';b.dataset.seatId=key(row.id,seat);
         b.setAttribute('aria-label',`${row.name}، مقعد ${seat}، ${g?g.name:'متاح'}`);
@@ -103,20 +103,29 @@
   $('confirm-dialog').addEventListener('cancel',()=>{pending=null;});
   function rowInputs(){
     const count=Number($('row-count').value);if(!Number.isInteger(count)||count<1||count>50)return;
-    const current=[...$('row-names').querySelectorAll('input')].map(i=>i.value);$('row-names').replaceChildren();
-    for(let i=0;i<count;i++){const label=node('label',`اسم الصف ${i+1}`);const input=node('input','');input.id=`row-name-${i}`;label.htmlFor=input.id;input.value=current[i]??state.rows[i]?.name??`الصف ${i+1}`;input.required=true;input.maxLength=60;$('row-names').append(label,input);}
+    const current=[...$('row-names').querySelectorAll('.row-setting')].map(group=>({name:group.querySelector('[data-field="name"]').value,seatCount:group.querySelector('[data-field="count"]').value}));
+    $('row-names').replaceChildren();
+    for(let i=0;i<count;i++){
+      const group=node('div','','row-setting');
+      const label=node('label',`اسم الصف ${i+1}`),input=node('input','');input.id=`row-name-${i}`;label.htmlFor=input.id;input.dataset.field='name';input.value=current[i]?.name??state.rows[i]?.name??`الصف ${i+1}`;input.required=true;input.maxLength=60;
+      const countLabel=node('label','عدد الكراسي'),chairs=node('input','');chairs.id=`row-seats-${i}`;countLabel.htmlFor=chairs.id;chairs.type='number';chairs.min=1;chairs.max=100;chairs.step=1;chairs.required=true;chairs.dataset.field='count';chairs.value=current[i]?.seatCount??state.rows[i]?.seatCount??SIZE;
+      group.append(label,input,countLabel,chairs);$('row-names').append(group);
+    }
   }
   $('open-settings').onclick=()=>{$('row-count').value=state.rows.length;$('row-names').replaceChildren();$('settings-error').hidden=true;rowInputs();$('settings-dialog').showModal();};
   $('row-count').oninput=rowInputs;$('cancel-settings').onclick=()=>$('settings-dialog').close();
   $('settings-form').onsubmit=e=>{
     e.preventDefault();const count=Number($('row-count').value);if(!Number.isInteger(count)||count<1||count>50)return;
-    const names=[...$('row-names').querySelectorAll('input')].map(i=>i.value.trim());
+    const names=[...$('row-names').querySelectorAll('[data-field="name"]')].map(i=>i.value.trim());
     if(names.length!==count||names.some(n=>!n)||new Set(names).size!==count){message('settings-error','اكتب اسمًا مختلفًا وغير فارغ لكل صف.');return;}
-    let nextId=state.nextRowId;const rows=names.map((name,i)=>({id:state.rows[i]?.id??nextId++,name}));const kept=new Set(rows.map(r=>r.id));
-    const moved=state.guests.filter(g=>g.rowId!==null&&!kept.has(g.rowId)).length;
-    const next={...state,rows,nextRowId:nextId,guests:state.guests.map(g=>g.rowId!==null&&!kept.has(g.rowId)?{...g,rowId:null,seat:null}:g)};
+    const seatCounts=[...$('row-names').querySelectorAll('[data-field="count"]')].map(i=>Number(i.value));
+    if(seatCounts.length!==count||seatCounts.some(n=>!Number.isInteger(n)||n<1||n>100)){message('settings-error','عدد الكراسي لكل صف يجب أن يكون عددًا صحيحًا من 1 إلى 100.');return;}
+    let nextId=state.nextRowId;const rows=names.map((name,i)=>({id:state.rows[i]?.id??nextId++,name,seatCount:seatCounts[i]}));
+    const excluded=g=>g.rowId!==null&&!rows.some(r=>r.id===g.rowId&&g.seat<=r.seatCount);
+    const moved=state.guests.filter(excluded).length;
+    const next={...state,rows,nextRowId:nextId,guests:state.guests.map(g=>excluded(g)?{...g,rowId:null,seat:null}:g)};
     const save=()=>{if(commit(next,'تم حفظ إعدادات الصفوف.'))$('settings-dialog').close();else message('settings-error','لم يتم حفظ الإعدادات؛ راجع تنبيه التخزين.');};
-    if(count<state.rows.length)confirm(`سيُحذف ${state.rows.length-count} من الصفوف ويُنقل ${moved} من الضيوف إلى الانتظار دون حذف بياناتهم. هل تريد المتابعة؟`,save);else save();
+    if(count<state.rows.length||rows.some(r=>r.seatCount<(state.rows.find(old=>old.id===r.id)?.seatCount??0)))confirm(`سيتم تقليل عدد الصفوف أو الكراسي، ويُنقل ${moved} من الضيوف إلى الانتظار دون حذف بياناتهم. هل تريد المتابعة؟`,save);else save();
   };
   window.addEventListener('storage',e=>{if(e.key===KEY||e.key===null)message('storage-warning','تغيرت البيانات في نافذة أخرى. حدّث الصفحة قبل التعديل للحفاظ على أحدث نسخة.');});
   function showView(){

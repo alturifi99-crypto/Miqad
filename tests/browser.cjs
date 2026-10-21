@@ -41,6 +41,17 @@ const assert=require('node:assert/strict');
  for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`overflow at ${width}`);}
  await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:'/tmp/miqad-rows-desktop.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});await page.screenshot({path:'/tmp/miqad-rows-mobile.png',fullPage:true});
+ // Independent per-row chair counts, persistence, and safe shrink.
+ await page.locator('#open-settings').click();await page.locator('#row-seats-0').fill('20');await page.locator('#row-seats-1').fill('12');
+ await page.getByRole('button',{name:'حفظ الإعدادات',exact:true}).click();await page.locator('#confirm-action').click();
+ assert.equal(await page.locator('.conference-row').nth(0).locator('.seat').count(),20);assert.equal(await page.locator('.conference-row').nth(1).locator('.seat').count(),12);
+ assert.equal(await page.locator('#capacity-label').textContent(),'من أصل 47 مقعدًا');
+ await add(1,20,'ضيف المقعد الإضافي');await page.reload();assert.equal(await chair(1,20).locator('span').textContent(),'ضيف المقعد الإضافي');
+ await page.locator('#open-settings').click();await page.locator('#row-seats-0').fill('15');await page.getByRole('button',{name:'حفظ الإعدادات',exact:true}).click();await page.locator('#cancel-action').click();assert.equal(await chair(1,20).count(),1);
+ await page.getByRole('button',{name:'حفظ الإعدادات',exact:true}).click();await page.locator('#confirm-action').click();assert.equal(await chair(1,20).count(),0);assert.equal((await snapshot()).guests.find(g=>g.name==='ضيف المقعد الإضافي').rowId,null);
+ await page.locator('#open-settings').click();await page.locator('#row-seats-0').fill('0');await page.getByRole('button',{name:'حفظ الإعدادات',exact:true}).click();assert.equal(await page.locator('#settings-dialog').isVisible(),true);assert.equal((await snapshot()).rows[0].seatCount,15);await page.locator('#cancel-settings').click();
+ // Existing version-2 records without per-row counts retain their original 15 chairs.
+ await page.evaluate(()=>{const d=JSON.parse(localStorage.getItem('miqadStateV2'));d.rows.forEach(r=>delete r.seatCount);localStorage.setItem('miqadStateV2',JSON.stringify(d));});await page.reload();assert.equal(await page.locator('.seat').count(),45);assert.equal(await chair(1,1).locator('span').textContent(),'أحمد المعدل');
  // Legacy migration keeps the exact old entry and preserves all guest records.
  const legacy=JSON.stringify([{id:1,name:'قديم',seat:20,title:'الجهة القديمة'},{id:2,name:'متعارض',seat:20},{id:3,name:'منتظر',seat:null}]);
  await page.evaluate(raw=>{localStorage.removeItem('miqadStateV2');localStorage.setItem('miqadGuests',raw);},legacy);await page.reload();
@@ -52,6 +63,6 @@ const assert=require('node:assert/strict');
  // Invalid new-format data is protected, never overwritten with fresh state.
  await page.evaluate(()=>localStorage.setItem('miqadStateV2','broken'));await page.reload();await chair(1,1).click();await page.locator('#name').fill('محاولة');await page.locator('#save-guest').click();assert.equal(await page.evaluate(()=>localStorage.getItem('miqadStateV2')),'broken');
  assert.deepEqual(errors,[]);
- console.log('PASS: 15 chairs per row, unique stable IDs, chair modal CRUD, all guest fields, edit/release confirmations, waiting-guest reassignment, settings grow/shrink/cancel/rename, no duplicate occupancy, persistence, legacy migration and original backup, storage errors and stale-write protection, injection safety, responsive widths 320/390/768/1440, no browser errors.');
+ console.log('PASS: configurable per-row counts, safe chair reduction and old-format defaults, unique stable IDs, chair modal CRUD, all guest fields, edit/release confirmations, waiting-guest reassignment, settings grow/shrink/cancel/rename, no duplicate occupancy, persistence, legacy migration and original backup, storage errors and stale-write protection, injection safety, responsive widths 320/390/768/1440, no browser errors.');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
