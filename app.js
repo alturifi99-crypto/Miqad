@@ -67,7 +67,7 @@
         b.setAttribute('aria-label',`${row.name}، مقعد ${seat}، ${g?g.name:'متاح'}`);
         b.append(node('strong',String(seat)),node('span',g?g.name:'متاح'));b.onclick=()=>openGuest(row.id,seat);chairs.append(b);
       }section.append(chairs);$('seats').append(section);
-    }renderList();renderLookup();
+    }
   }
   function fillGuest(g){$('name').value=g?.name||'';$('title').value=g?.title||'';$('organization').value=g?.organization||'';$('vip').checked=g?.category==='vip';$('notes').value=g?.notes||'';}
   function openGuest(rowId,seat,id){
@@ -101,28 +101,6 @@
   $('confirm-action').onclick=()=>{const action=pending;pending=null;$('confirm-dialog').close();action?.();};
   $('cancel-action').onclick=()=>{$('confirm-dialog').close();pending=null;};
   $('confirm-dialog').addEventListener('cancel',()=>{pending=null;});
-  function renderList(){
-    const q=$('search').value.trim().toLocaleLowerCase('ar'),filter=$('filter').value;
-    const shown=state.guests.filter(g=>`${g.name} ${g.title} ${g.organization}`.toLocaleLowerCase('ar').includes(q)&&(filter==='all'||filter==='vip'&&g.category==='vip'||filter==='waiting'&&g.rowId===null||filter==='seated'&&g.rowId!==null));
-    $('list-count').textContent=shown.length;$('guests').replaceChildren();
-    shown.forEach(g=>{
-      const tr=node('tr',''),person=node('td',g.name);if(g.title||g.organization)person.append(node('small',[g.title,g.organization].filter(Boolean).join(' · ')));
-      const category=node('td','');category.append(node('span',g.category==='vip'?'كبار الشخصيات':'ضيف',`tag${g.category==='vip'?' vip':''}`));
-      const actions=node('td',''),buttons=node('div','','row-actions');
-      const edit=node('button','عرض وتعديل');edit.type='button';edit.setAttribute('aria-label',`تعديل ${g.name}`);edit.onclick=()=>openGuest(g.rowId,g.seat,g.id);
-      const del=node('button','حذف','delete');del.type='button';del.setAttribute('aria-label',`حذف ${g.name}`);del.onclick=()=>confirm(`هل تريد حذف ${g.name} نهائيًا وإتاحة مقعده؟`,()=>commit({...state,guests:state.guests.filter(item=>item.id!==g.id)},'تم حذف الضيف.'));
-      buttons.append(edit,del);actions.append(buttons);tr.append(person,category,node('td',label(g)),node('td',g.rowId===null?'بانتظار التجليس':'تم التجليس'),actions);$('guests').append(tr);
-    });$('empty-state').hidden=shown.length>0;$('empty-state').querySelector('h3').textContent=state.guests.length?'لا توجد نتائج مطابقة':'قائمة ضيوفك تبدأ هنا';
-  }
-  function renderLookup(){
-    const q=$('seat-search').value.trim().toLocaleLowerCase('ar').replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
-    $('seat-search-results').replaceChildren();if(!q){$('seat-search-result').textContent='ابحث بالاسم أو الجهة أو رقم المقعد أو معرّفه مثل 2:5.';return;}
-    const numeric=/^\d+$/.test(q),address=/^\d+:\d+$/.test(q);
-    const add=(name,location,extra)=>{const card=node('article','','seat-result');card.append(node('strong',name),node('span',location));if(extra)card.append(node('small',extra));$('seat-search-results').append(card);};
-    if(numeric||address){for(const r of state.rows)for(let s=1;s<=SIZE;s++){if(numeric?String(s)!==String(Number(q)):key(r.id,s)!==q)continue;const g=state.guests.find(g=>g.rowId===r.id&&g.seat===s);add(g?g.name:'كرسي متاح',`${r.name} · مقعد ${s}`,`المعرّف: ${key(r.id,s)}`);}}
-    else state.guests.filter(g=>`${g.name} ${g.title} ${g.organization}`.toLocaleLowerCase('ar').includes(q)).forEach(g=>add(g.name,label(g),g.organization));
-    const count=$('seat-search-results').children.length;$('seat-search-result').textContent=count?`${count} نتيجة بحث`:'لا توجد نتائج مطابقة.';
-  }
   function rowInputs(){
     const count=Number($('row-count').value);if(!Number.isInteger(count)||count<1||count>50)return;
     const current=[...$('row-names').querySelectorAll('input')].map(i=>i.value);$('row-names').replaceChildren();
@@ -140,7 +118,6 @@
     const save=()=>{if(commit(next,'تم حفظ إعدادات الصفوف.'))$('settings-dialog').close();else message('settings-error','لم يتم حفظ الإعدادات؛ راجع تنبيه التخزين.');};
     if(count<state.rows.length)confirm(`سيُحذف ${state.rows.length-count} من الصفوف ويُنقل ${moved} من الضيوف إلى الانتظار دون حذف بياناتهم. هل تريد المتابعة؟`,save);else save();
   };
-  $('search').oninput=renderList;$('filter').onchange=renderList;$('seat-search').oninput=renderLookup;
   window.addEventListener('storage',e=>{if(e.key===KEY||e.key===null)message('storage-warning','تغيرت البيانات في نافذة أخرى. حدّث الصفحة قبل التعديل للحفاظ على أحدث نسخة.');});
   function showView(){
     const management=location.hash==='#guest-section';

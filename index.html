@@ -29,23 +29,12 @@
 <div class="legend"><span><i></i> متاح</span><span><i class="occupied"></i> محجوز</span><span><i class="vip"></i> كبار الشخصيات</span></div>
 </section>
 </section>
-<section id="guest-section" aria-labelledby="management-title" hidden><div class="page-heading"><div><h1 id="management-title">إدارة الضيوف</h1><p class="muted">ملخص الحضور والبحث وإدارة بيانات الضيوف.</p></div></div>
+<section id="guest-section" aria-labelledby="management-title" hidden><div class="page-heading"><div><h1 id="management-title">إدارة الضيوف</h1><p class="muted">إحصائيات الضيوف وكبار الشخصيات وحالة المقاعد.</p></div></div>
 <section class="stats" aria-label="ملخص الضيوف والمقاعد">
 <article class="stat"><span class="stat-icon">♙</span><p>إجمالي الضيوف</p><strong id="total-count">0</strong><small>ضيف مسجّل</small></article>
 <article class="stat"><span class="stat-icon gold">✧</span><p>كبار الشخصيات</p><strong id="vip-count">0</strong><small>ضيوف بأولوية خاصة</small></article>
 <article class="stat"><span class="stat-icon">▦</span><p>المقاعد المشغولة</p><strong id="occupied-count">0</strong><small id="capacity-label"></small></article>
 <article class="stat"><span class="stat-icon gold">◷</span><p>بانتظار التجليس</p><strong id="waiting-count">0</strong><small>ضيف دون مقعد</small></article>
-</section>
-<section class="panel guest-panel" id="guest-list"><div class="panel-heading"><div><p class="eyebrow">قائمة الحضور</p><h2>قائمة الأشخاص <span id="list-count" class="count">0</span></h2></div><span class="muted">تفاصيل واضحة لاستقبال أفضل</span></div>
-<details class="lookup-details"><summary>البحث عن المقعد أو معرّفه</summary><section class="seat-lookup-panel" id="seat-search-section" aria-labelledby="seat-search-title">
-<div class="panel-heading"><div><p class="eyebrow">اعرف مكان ضيفك</p><h2 id="seat-search-title">بحث عن المقعد</h2></div><span class="pill">بحث فقط</span></div>
-<p class="muted">اكتب اسم الضيف أو الجهة أو رقم الكرسي لعرض المقعد واسم صاحبه.</p>
-<div class="seat-search"><label for="seat-search">اسم الضيف أو رقم المقعد</label><input type="search" id="seat-search" placeholder="ابحث باسم الضيف أو رقم المقعد…" autocomplete="off"><p id="seat-search-result" class="muted" role="status" aria-live="polite"></p></div>
-<div id="seat-search-results" class="seat-search-results" aria-label="نتائج البحث عن المقعد"></div>
-</section>
-</details>
-<div class="filters"><label class="search-label" for="search">البحث عن ضيف<input type="search" id="search" placeholder="ابحث بالاسم أو الجهة…"></label><label for="filter">عرض الفئة<select id="filter"><option value="all">جميع الضيوف</option><option value="vip">كبار الشخصيات</option><option value="waiting">بانتظار التجليس</option><option value="seated">تم التجليس</option></select></label></div>
-<div class="table-scroll"><table><thead><tr><th scope="col">الضيف</th><th scope="col">الفئة</th><th scope="col">المقعد</th><th scope="col">الحالة</th><th scope="col">الإجراءات</th></tr></thead><tbody id="guests"></tbody></table></div><div id="empty-state" class="empty-state"><span>♙</span><h3>قائمة ضيوفك تبدأ هنا</h3><p>اضغط على كرسي فارغ في مخطط القاعة لإضافة أول ضيف.</p></div>
 </section>
 </section>
 <footer>مقعد <span>عناية بالتفاصيل. ترحيب يليق.</span></footer>

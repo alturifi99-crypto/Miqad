@@ -30,8 +30,7 @@ const assert=require('node:assert/strict');
  await chair(3,15).click();const id=(await snapshot()).guests[1].id;await page.locator('#waiting-guest').selectOption(id);await page.locator('#save-guest').click();await page.locator('#confirm-action').click();assert.equal(await chair(3,15).locator('span').textContent(),'سارة');
  await page.locator('.sidebar nav a[href="#guest-section"]').click();await page.locator('#guest-section').waitFor({state:'visible'});
  assert.equal(await page.locator('#dashboard').isVisible(),false);assert.equal(await page.locator('#guest-section .stats').isVisible(),true);
- await page.locator('.lookup-details summary').click();
- const beforeSearch=JSON.stringify(await snapshot());await page.locator('#seat-search').fill('١');assert.equal(await page.locator('.seat-result').count(),3);await page.locator('#seat-search').fill('3:15');assert.match(await page.locator('.seat-result').textContent(),/سارة/);assert.equal(JSON.stringify(await snapshot()),beforeSearch);
+ assert.equal(await page.locator('#guest-section input, #guest-section table, #guest-section .stage, #guest-section .seat').count(),0);
  await page.locator('.sidebar nav a[href="#dashboard"]').click();await page.locator('#dashboard').waitFor({state:'visible'});
  await page.locator('#open-settings').click();await page.locator('#row-name-0').fill('الصف الرئاسي');await page.getByRole('button',{name:'حفظ الإعدادات',exact:true}).click();assert.equal(await chair(1,1).locator('span').textContent(),'أحمد المعدل');
  await page.locator('#open-settings').click();await page.locator('#row-count').fill('2');await page.getByRole('button',{name:'حفظ الإعدادات',exact:true}).click();await page.locator('#cancel-action').click();assert.equal((await snapshot()).rows.length,3);
@@ -53,6 +52,6 @@ const assert=require('node:assert/strict');
  // Invalid new-format data is protected, never overwritten with fresh state.
  await page.evaluate(()=>localStorage.setItem('miqadStateV2','broken'));await page.reload();await chair(1,1).click();await page.locator('#name').fill('محاولة');await page.locator('#save-guest').click();assert.equal(await page.evaluate(()=>localStorage.getItem('miqadStateV2')),'broken');
  assert.deepEqual(errors,[]);
- console.log('PASS: 15 chairs per row, unique stable IDs, chair modal CRUD, all guest fields, edit/release confirmations, waiting-guest reassignment, settings grow/shrink/cancel/rename, no duplicate occupancy, persistence, legacy migration and original backup, read-only search, storage errors and stale-write protection, injection safety, responsive widths 320/390/768/1440, no browser errors.');
+ console.log('PASS: 15 chairs per row, unique stable IDs, chair modal CRUD, all guest fields, edit/release confirmations, waiting-guest reassignment, settings grow/shrink/cancel/rename, no duplicate occupancy, persistence, legacy migration and original backup, storage errors and stale-write protection, injection safety, responsive widths 320/390/768/1440, no browser errors.');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
