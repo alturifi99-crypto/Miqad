@@ -51,15 +51,51 @@
     }catch{message('storage-warning','تعذّر الحفظ. لم يُعتمد التغيير؛ تحقق من مساحة التخزين وإعدادات المتصفح ثم أعد المحاولة.');return false;}
   }
   function commit(next,text){if(!persist(next))return false;render();if(text)message('notice',text);return true;}
+  function changeChairs(rowId,delta){
+    const row=state.rows.find(r=>r.id===rowId);if(!row)return;
+    const seatCount=row.seatCount+delta;if(seatCount<1||seatCount>100)return;
+    const affected=g=>g.rowId===rowId&&g.seat>seatCount;
+    const moved=state.guests.filter(affected).length;
+    const save=()=>{
+      if(commit({...state,rows:state.rows.map(r=>r.id===rowId?{...r,seatCount}:r),guests:state.guests.map(g=>affected(g)?{...g,rowId:null,seat:null}:g)},`تم تحديث ${row.name} إلى ${seatCount} كرسيًا.`)){
+        document.querySelector(`[data-row-id="${rowId}"] [data-action="${delta>0?'increase':'decrease'}"]`)?.focus({preventScroll:true});
+      }
+    };
+    if(moved)confirm(`الكرسي الأخير مشغول. سيُنقل ${moved} من الضيوف إلى الانتظار دون حذف بياناتهم. هل تريد تقليل الكراسي؟`,save);else save();
+  }
+  function deleteRow(rowId){
+    if(state.rows.length<=1)return;
+    const row=state.rows.find(r=>r.id===rowId);if(!row)return;
+    const moved=state.guests.filter(g=>g.rowId===rowId).length;
+    confirm(`هل تريد حذف ${row.name}؟ سيُنقل ${moved} من الضيوف إلى الانتظار دون حذف بياناتهم.`,()=>{
+      if(commit({...state,rows:state.rows.filter(r=>r.id!==rowId),guests:state.guests.map(g=>g.rowId===rowId?{...g,rowId:null,seat:null}:g)},'تم حذف الصف مع الاحتفاظ ببيانات الضيوف.'))$('add-row').focus({preventScroll:true});
+    });
+  }
+  $('add-row').onclick=()=>{
+    if(state.rows.length>=50)return;
+    const id=state.nextRowId;let name=`الصف ${id}`;
+    while(state.rows.some(r=>r.name===name))name+=' الجديد';
+    if(commit({...state,nextRowId:id+1,rows:[...state.rows,{id,name,seatCount:SIZE}]},'تمت إضافة صف جديد.')){
+      document.querySelector(`[data-row-id="${id}"]`)?.scrollIntoView({block:'nearest'});
+    }
+  };
   function render(){
     $('total-count').textContent=state.guests.length;
     $('vip-count').textContent=state.guests.filter(g=>g.category==='vip').length;
     $('occupied-count').textContent=state.guests.filter(g=>g.rowId!==null).length;
     $('waiting-count').textContent=state.guests.filter(g=>g.rowId===null).length;
     $('capacity-label').textContent=`من أصل ${state.rows.reduce((total,row)=>total+row.seatCount,0)} مقعدًا`;
+    $('add-row').disabled=state.rows.length>=50;
     $('seats').replaceChildren();
     for(const row of state.rows){
-      const section=node('section','','conference-row');section.append(node('h3',row.name));
+      const section=node('section','','conference-row');section.dataset.rowId=row.id;
+      const header=node('div','','row-heading');header.append(node('h3',row.name));
+      const controls=node('div','','row-controls');controls.setAttribute('role','group');controls.setAttribute('aria-label',`التحكم في ${row.name}`);
+      const decrease=node('button','−','chair-control');decrease.type='button';decrease.dataset.action='decrease';decrease.setAttribute('aria-label',`تقليل كراسي ${row.name}`);decrease.disabled=row.seatCount<=1;decrease.onclick=()=>changeChairs(row.id,-1);
+      const count=node('span',`${row.seatCount} كرسيًا`,'row-chair-count');
+      const increase=node('button','+','chair-control');increase.type='button';increase.dataset.action='increase';increase.setAttribute('aria-label',`زيادة كراسي ${row.name}`);increase.disabled=row.seatCount>=100;increase.onclick=()=>changeChairs(row.id,1);
+      const remove=node('button','حذف الصف','button row-delete');remove.type='button';remove.setAttribute('aria-label',`حذف ${row.name}`);remove.disabled=state.rows.length<=1;remove.title=state.rows.length<=1?'يجب الاحتفاظ بصف واحد على الأقل':'';remove.onclick=()=>deleteRow(row.id);
+      controls.append(decrease,count,increase,remove);header.append(controls);section.append(header);
       const chairs=node('div','','seats');chairs.setAttribute('aria-label',row.name);chairs.style.setProperty('--seat-count',row.seatCount);chairs.style.minWidth=row.seatCount>15?`${row.seatCount*48}px`:'0';
       for(let seat=1;seat<=row.seatCount;seat++){
         const g=state.guests.find(g=>g.rowId===row.id&&g.seat===seat);

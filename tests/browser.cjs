@@ -52,6 +52,19 @@ const assert=require('node:assert/strict');
  await page.locator('#open-settings').click();await page.locator('#row-seats-0').fill('0');await page.getByRole('button',{name:'حفظ الإعدادات',exact:true}).click();assert.equal(await page.locator('#settings-dialog').isVisible(),true);assert.equal((await snapshot()).rows[0].seatCount,15);await page.locator('#cancel-settings').click();
  // Existing version-2 records without per-row counts retain their original 15 chairs.
  await page.evaluate(()=>{const d=JSON.parse(localStorage.getItem('miqadStateV2'));d.rows.forEach(r=>delete r.seatCount);localStorage.setItem('miqadStateV2',JSON.stringify(d));});await page.reload();assert.equal(await page.locator('.seat').count(),45);assert.equal(await chair(1,1).locator('span').textContent(),'أحمد المعدل');
+ // Direct dashboard controls: per-row update, occupied-chair confirmation, and row CRUD.
+ const row=id=>page.locator(`[data-row-id="${id}"]`);
+ await row(1).locator('[data-action="increase"]').click();assert.equal(await row(1).locator('.seat').count(),16);assert.equal(await row(2).locator('.seat').count(),15);
+ await add(1,16,'ضيف كرسي جديد');await row(1).locator('[data-action="decrease"]').click();await page.locator('#cancel-action').click();assert.equal(await chair(1,16).count(),1);
+ await row(1).locator('[data-action="decrease"]').click();await page.locator('#confirm-action').click();assert.equal(await chair(1,16).count(),0);assert.equal((await snapshot()).guests.find(g=>g.name==='ضيف كرسي جديد').rowId,null);
+ await page.locator('#add-row').click();const added=(await snapshot()).rows.at(-1);assert.equal(added.seatCount,15);assert.equal(await row(added.id).locator('.seat').count(),15);
+ await row(1).locator('.row-delete').click();await page.locator('#cancel-action').click();assert.equal(await row(1).count(),1);
+ const guestsBefore=(await snapshot()).guests.length;await row(1).locator('.row-delete').click();await page.locator('#confirm-action').click();assert.equal(await row(1).count(),0);assert.equal((await snapshot()).guests.length,guestsBefore);assert.equal((await snapshot()).guests.find(g=>g.name==='أحمد المعدل').rowId,null);assert.equal((await snapshot()).rows.at(-1).id,added.id);
+ await page.reload();assert.equal(await row(1).count(),0);assert.equal(await row(added.id).count(),1);
+ await page.locator('#open-settings').click();await page.locator('#row-seats-0').fill('1');await page.getByRole('button',{name:'حفظ الإعدادات',exact:true}).click();await page.locator('#confirm-action').click();assert.equal(await row(2).locator('[data-action="decrease"]').isDisabled(),true);
+ await page.locator('#open-settings').click();await page.locator('#row-seats-0').fill('100');await page.getByRole('button',{name:'حفظ الإعدادات',exact:true}).click();assert.equal(await row(2).locator('[data-action="increase"]').isDisabled(),true);
+ for(const width of [320,390,768]){await page.setViewportSize({width,height:900});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`controls overflow at ${width}`);}
+ for(const id of [4,added.id]){await row(id).locator('.row-delete').click();await page.locator('#confirm-action').click();}assert.equal(await row(2).locator('.row-delete').isDisabled(),true);
  // Legacy migration keeps the exact old entry and preserves all guest records.
  const legacy=JSON.stringify([{id:1,name:'قديم',seat:20,title:'الجهة القديمة'},{id:2,name:'متعارض',seat:20},{id:3,name:'منتظر',seat:null}]);
  await page.evaluate(raw=>{localStorage.removeItem('miqadStateV2');localStorage.setItem('miqadGuests',raw);},legacy);await page.reload();
@@ -63,6 +76,6 @@ const assert=require('node:assert/strict');
  // Invalid new-format data is protected, never overwritten with fresh state.
  await page.evaluate(()=>localStorage.setItem('miqadStateV2','broken'));await page.reload();await chair(1,1).click();await page.locator('#name').fill('محاولة');await page.locator('#save-guest').click();assert.equal(await page.evaluate(()=>localStorage.getItem('miqadStateV2')),'broken');
  assert.deepEqual(errors,[]);
- console.log('PASS: configurable per-row counts, safe chair reduction and old-format defaults, unique stable IDs, chair modal CRUD, all guest fields, edit/release confirmations, waiting-guest reassignment, settings grow/shrink/cancel/rename, no duplicate occupancy, persistence, legacy migration and original backup, storage errors and stale-write protection, injection safety, responsive widths 320/390/768/1440, no browser errors.');
+ console.log('PASS: direct +/- and row add/delete, limit buttons and confirmation, configurable per-row counts, safe chair reduction and old-format defaults, unique stable IDs, chair modal CRUD, all guest fields, edit/release confirmations, waiting-guest reassignment, settings grow/shrink/cancel/rename, no duplicate occupancy, persistence, legacy migration and original backup, storage errors and stale-write protection, injection safety, responsive widths 320/390/768/1440, no browser errors.');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
