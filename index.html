@@ -6,8 +6,8 @@
 <meta name="ui-version" content="workspace-20261022">
 <meta name="theme-color" content="#22272B">
 <title>مقعد | إدارة البروتوكول والضيوف</title>
-<link rel="stylesheet" href="styles.css?v=20261022-workspace">
-<script src="app.js?v=20261022-workspace" defer></script>
+<link rel="stylesheet" href="styles.css?v=20261022-drawer">
+<script src="app.js?v=20261022-drawer" defer></script>
 </head>
 <body>
 <aside class="sidebar">
@@ -27,6 +27,7 @@
 <button id="sidebar-backdrop" type="button" aria-label="إغلاق القائمة الجانبية" hidden></button>
 <main id="app-main">
 <header class="topbar">
+<button id="mobile-menu-toggle" type="button" aria-controls="sidebar-menu" aria-expanded="false" aria-label="فتح القائمة الجانبية"><span class="hamburger" aria-hidden="true"><span></span><span></span><span></span></span></button>
 <div class="event-switcher"><button id="edit-workspace" type="button" class="event-button"><span class="event-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4M17 3v4M3 11h18"/></svg></span><span><small>الفعالية الحالية</small><strong data-event-name>فعالية غير مسماة</strong></span><span aria-hidden="true">⌄</span></button></div>
 <div class="global-search"><label class="sr-only" for="global-search">بحث سريع عن ضيف</label><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input id="global-search" type="search" placeholder="ابحث عن ضيف أو جهة…" autocomplete="off"><div id="global-search-results" class="global-results" hidden></div></div>
 <div class="topbar-actions"><details id="notifications" class="notifications"><summary aria-label="تنبيهات التنظيم"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span id="notification-badge" hidden>0</span></summary><div class="top-popover"><h3>تنبيهات التنظيم</h3><p id="notification-text"></p><button type="button" class="button secondary" id="show-waiting">عرض الضيوف المنتظرين</button><small>مؤشرات من البيانات المحفوظة على هذا الجهاز.</small></div></details><button id="user-settings" type="button" class="user-profile"><span class="profile-avatar" id="user-initial">م</span><span><strong data-user-name>مسؤول التنظيم</strong><small>مساحة عمل محلية</small></span></button></div>

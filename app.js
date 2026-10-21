@@ -377,19 +377,31 @@
     document.querySelectorAll('.sidebar nav a').forEach(a=>{if(a.hash===`#${route}`)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
   }
   $('settings-shortcut').onclick=()=>$('open-settings').click();
-  const mobileSidebar=matchMedia('(max-width:700px)');
+  const mobileSidebar=matchMedia('(max-width:700px), (max-width:1000px) and (max-height:500px) and (pointer:coarse)');
   function setSidebar(collapsed,save=false){
+    const wasOpen=document.body.classList.contains('mobile-sidebar-open');
     document.body.classList.toggle('sidebar-collapsed',collapsed);
     const open=mobileSidebar.matches&&!collapsed;document.body.classList.toggle('mobile-sidebar-open',open);$('sidebar-backdrop').hidden=!open;$('app-main').inert=open;
     const text=collapsed?'توسيع القائمة الجانبية':'طي القائمة الجانبية';
     $('sidebar-toggle').setAttribute('aria-expanded',String(!collapsed));$('sidebar-toggle').setAttribute('aria-label',text);$('sidebar-toggle').title=text;
+    $('mobile-menu-toggle').setAttribute('aria-expanded',String(open));$('mobile-menu-toggle').setAttribute('aria-label',open?'إغلاق القائمة الجانبية':'فتح القائمة الجانبية');
+    const sidebar=document.querySelector('.sidebar');sidebar.inert=mobileSidebar.matches&&!open;
+    if(mobileSidebar.matches){sidebar.setAttribute('aria-hidden',String(!open));if(open){sidebar.setAttribute('role','dialog');sidebar.setAttribute('aria-modal','true');sidebar.setAttribute('aria-label','القائمة الرئيسية');}else{sidebar.removeAttribute('role');sidebar.removeAttribute('aria-modal');}}
+    else{sidebar.removeAttribute('aria-hidden');sidebar.removeAttribute('role');sidebar.removeAttribute('aria-modal');}
+    if(open&&!wasOpen)$('sidebar-toggle').focus({preventScroll:true});else if(wasOpen&&!open&&mobileSidebar.matches)$('mobile-menu-toggle').focus({preventScroll:true});
     if(save)try{localStorage.setItem('miqadSidebarCollapsed',String(collapsed));}catch{/* Navigation remains usable when preference storage is unavailable. */}
   }
   function sidebarPreference(){try{return localStorage.getItem('miqadSidebarCollapsed')==='true';}catch{return false;}}
   let collapsed=mobileSidebar.matches?true:sidebarPreference();
   setSidebar(collapsed);$('sidebar-toggle').onclick=()=>setSidebar(!document.body.classList.contains('sidebar-collapsed'),true);
-  $('sidebar-backdrop').onclick=()=>{setSidebar(true,true);$('sidebar-toggle').focus();};
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.body.classList.contains('mobile-sidebar-open')&&!document.querySelector('dialog[open]')){setSidebar(true,true);$('sidebar-toggle').focus();}});
+  $('mobile-menu-toggle').onclick=()=>setSidebar(!document.body.classList.contains('sidebar-collapsed'),true);
+  $('sidebar-backdrop').onclick=()=>setSidebar(true,true);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.body.classList.contains('mobile-sidebar-open')&&!document.querySelector('dialog[open]')){setSidebar(true,true);}});
+  document.addEventListener('keydown',e=>{
+    if(e.key!=='Tab'||!document.body.classList.contains('mobile-sidebar-open')||document.querySelector('dialog[open]'))return;
+    const items=[...document.querySelectorAll('.sidebar a,.sidebar button')].filter(n=>!n.disabled&&n.getClientRects().length),first=items[0],last=items.at(-1);
+    if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+  });
   document.querySelectorAll('.sidebar nav a').forEach(a=>a.addEventListener('click',()=>{if(mobileSidebar.matches)setSidebar(true,true);}));
   mobileSidebar.addEventListener('change',()=>setSidebar(mobileSidebar.matches?true:sidebarPreference()));
   window.addEventListener('hashchange',showView);
