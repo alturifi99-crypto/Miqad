@@ -25,6 +25,8 @@
 <section id="dashboard" aria-label="لوحة التحكم">
 <section class="panel seating-panel" id="seating-section"><div class="panel-heading"><div><p class="eyebrow">توزيع مدروس، استقبال يليق</p><h1>لوحة التحكم</h1></div><div class="dashboard-actions"><button class="button primary" id="add-row" type="button">＋ إضافة صف جديد</button><button class="button secondary" id="open-settings" type="button">إعدادات الصفوف</button></div></div>
 <p class="muted">اضغط على كرسي فارغ لإضافة ضيف، أو كرسي مشغول لعرض بياناته وتعديلها.</p>
+<div class="guest-lookup"><label for="guest-search">البحث عن الضيف</label><input type="search" id="guest-search" placeholder="اكتب اسم الضيف…" autocomplete="off"><div id="guest-search-results" class="guest-search-results" aria-live="polite"></div></div>
+<div id="move-banner" class="move-banner" hidden><span id="move-description"></span><button class="button secondary" id="cancel-move" type="button">إلغاء النقل</button></div>
 <div class="conference-scroll" tabindex="0" role="region" aria-label="منصة المؤتمر، مرّر أفقيًا لاستعراض الكراسي"><div class="conference-floor"><div class="stage">منصة المؤتمر<span>توزيع الكراسي حسب مساحة المسرح</span></div><div id="seats" aria-label="صفوف كراسي المؤتمر"></div></div></div><p class="scroll-hint">مرّر أفقيًا عند زيادة عدد الكراسي. اضغط على أي كرسي لعرض بيانات ضيفه أو إضافة ضيف.</p>
 <div class="legend"><span><i></i> متاح</span><span><i class="occupied"></i> محجوز</span><span><i class="vip"></i> كبار الشخصيات</span></div>
 </section>
@@ -49,7 +51,7 @@
 <label class="checkbox-label" for="vip"><input type="checkbox" id="vip"> من كبار الشخصيات</label>
 <label for="notes">الملاحظات</label><textarea id="notes" rows="3" maxlength="2000"></textarea>
 <p id="guest-error" class="inline-error" role="alert" hidden></p>
-<div class="dialog-actions"><button class="button primary" type="submit" id="save-guest">حفظ بيانات الضيف</button><button class="button secondary" type="button" id="release-seat">إخلاء الكرسي</button><button class="button secondary" type="button" id="close-guest">إلغاء</button></div>
+<div class="dialog-actions"><button class="button primary" type="submit" id="save-guest">حفظ بيانات الضيف</button><button class="button secondary" type="button" id="start-move">نقل إلى كرسي آخر</button><button class="button secondary" type="button" id="release-seat">إخلاء الكرسي</button><button class="button secondary" type="button" id="close-guest">إلغاء</button></div>
 </form></dialog>
 <dialog id="settings-dialog" aria-labelledby="settings-title"><h2 id="settings-title">إعدادات الصفوف</h2><p class="muted">يمكنك تحديد اسم كل صف وعدد كراسيه من 1 إلى 100. تقليل الصفوف أو الكراسي ينقل ضيوف الكراسي المستبعدة إلى الانتظار بعد التأكيد، دون حذف بياناتهم.</p><form id="settings-form"><label for="row-count">عدد الصفوف</label><input id="row-count" type="number" min="1" max="50" required><div id="row-names"></div><p id="settings-error" class="inline-error" role="alert" hidden></p><div class="dialog-actions"><button class="button primary" type="submit">حفظ الإعدادات</button><button class="button secondary" type="button" id="cancel-settings">إلغاء</button></div></form></dialog>
 <dialog id="confirm-dialog" aria-labelledby="confirm-title"><h2 id="confirm-title">تأكيد العملية</h2><p id="confirm-description"></p><div class="dialog-actions"><button class="button danger" type="button" id="confirm-action">تأكيد</button><button class="button secondary" type="button" id="cancel-action">إلغاء</button></div></dialog>
