@@ -300,15 +300,30 @@
     if(count<state.rows.length||rows.some(r=>r.seatCount<(state.rows.find(old=>old.id===r.id)?.seatCount??0)))confirm(`سيتم تقليل عدد الصفوف أو الكراسي، ويُنقل ${moved} من الضيوف إلى الانتظار دون حذف بياناتهم. هل تريد المتابعة؟`,save);else save();
   };
   window.addEventListener('storage',e=>{if(e.key===KEY||e.key===null)message('storage-warning','تغيرت البيانات في نافذة أخرى. حدّث الصفحة قبل التعديل للحفاظ على أحدث نسخة.');});
+  const routes={dashboard:'لوحة التحكم','seating-layout':'مخطط المقاعد','guest-section':'إدارة الضيوف','check-in':'الاستقبال والحضور','events-halls':'الفعاليات والقاعات',reports:'التقارير والإحصائيات',settings:'الإعدادات'};
   function showView(){
-    const management=location.hash==='#guest-section';
-    $('dashboard').hidden=management;$('guest-section').hidden=!management;
-    $('current-view-title').textContent=management?'إدارة الضيوف':'لوحة التحكم';
-    document.querySelectorAll('.sidebar nav a').forEach(a=>{
-      const selected=a.hash===(management?'#guest-section':'#dashboard');
-      if(selected)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');
-    });
+    const requested=location.hash.slice(1),route=Object.hasOwn(routes,requested)?requested:'dashboard';
+    const management=route==='guest-section'||route==='reports',layout=route==='dashboard'||route==='seating-layout';
+    $('dashboard').hidden=!layout;$('guest-section').hidden=!management;$('secondary-view').hidden=layout||management;
+    $('management-details').hidden=route==='reports';
+    $('management-title').textContent=route==='reports'?routes.reports:routes['guest-section'];
+    $('layout-view-title').textContent=routes[layout?route:'dashboard'];$('current-view-title').textContent=routes[route];
+    $('settings-shortcut').hidden=route!=='settings';
+    if(!layout&&!management){
+      $('secondary-title').textContent=routes[route];$('secondary-description').textContent=route==='settings'?'تخصيص الصفوف والكراسي في القاعة.':'هذا القسم غير متاح حاليًا.';
+      $('secondary-message').textContent=route==='settings'?'يمكنك تعديل أسماء الصفوف وعددها وعدد الكراسي لكل صف من الإعدادات.':route==='check-in'?'لم تُضف بعد وظائف تسجيل الوصول والحضور.':'لم تُضف بعد وظائف إنشاء الفعاليات وإدارة القاعات.';
+    }
+    document.querySelectorAll('.sidebar nav a').forEach(a=>{if(a.hash===`#${route}`)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
   }
+  $('settings-shortcut').onclick=()=>$('open-settings').click();
+  function setSidebar(collapsed,save=false){
+    document.body.classList.toggle('sidebar-collapsed',collapsed);
+    const text=collapsed?'توسيع القائمة الجانبية':'طي القائمة الجانبية';
+    $('sidebar-toggle').setAttribute('aria-expanded',String(!collapsed));$('sidebar-toggle').setAttribute('aria-label',text);$('sidebar-toggle').title=text;$('sidebar-toggle').textContent=collapsed?'⇤':'⇥';
+    if(save)try{localStorage.setItem('miqadSidebarCollapsed',String(collapsed));}catch{/* Navigation remains usable when preference storage is unavailable. */}
+  }
+  let collapsed=false;try{collapsed=localStorage.getItem('miqadSidebarCollapsed')==='true';}catch{}
+  setSidebar(collapsed);$('sidebar-toggle').onclick=()=>setSidebar(!document.body.classList.contains('sidebar-collapsed'),true);
   window.addEventListener('hashchange',showView);
   showView();
   load();render();
