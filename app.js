@@ -1,7 +1,7 @@
 'use strict';
 (() => {
   const KEY = 'miqadGuests';
-  const CAPACITY = 20;
+  const CAPACITY = 15;
   const $ = id => document.getElementById(id);
   let guests = [];
   let editingId = null;
@@ -18,6 +18,7 @@
       const data = JSON.parse(raw);
       if (!Array.isArray(data) || data.some(g => !g || typeof g.name !== 'string' || !g.name.trim())) throw new Error('Invalid data');
       const usedSeats = new Set();
+      let movedToWaiting = 0;
       const usedIds = new Set();
       guests = data.map(g => {
         let id = String(g.id ?? uid());
@@ -25,8 +26,10 @@
         usedIds.add(id);
         const seat = Number.isInteger(g.seat) && g.seat >= 1 && g.seat <= CAPACITY && !usedSeats.has(g.seat) ? g.seat : null;
         if (seat !== null) usedSeats.add(seat);
+        else if (g.seat != null) movedToWaiting++;
         return {id, name:g.name.trim(), title:typeof g.title === 'string' ? g.title : '', category:g.category === 'vip' ? 'vip' : 'regular', seat};
       });
+      if (movedToWaiting) notify(`تم نقل ${movedToWaiting} من تخصيصات المقاعد القديمة غير المتاحة إلى قائمة الانتظار، مع الاحتفاظ بالأشخاص.`);
     } catch {
       storageBlocked = true;
       warn('تعذّرت قراءة البيانات المحفوظة. لم نغيّرها. تحقق من إعدادات التخزين أو احتفظ بنسخة من بيانات miqadGuests قبل إصلاحها؛ التعديلات الحالية مؤقتة.');
@@ -71,7 +74,21 @@
       b.append(node('strong', String(i)), node('span', guest ? guest.name : 'متاح'));
       b.addEventListener('click', () => assign(i)); $('seats').append(b);
     }
-    seatOptions(); renderList();
+    seatOptions(); renderList(); renderSeatSearch();
+  }
+  function renderSeatSearch() {
+    const query = $('seat-search').value.trim().toLocaleLowerCase('ar');
+    const normalized = query.replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+    let matches = 0;
+    [...$('seats').children].forEach((button, index) => {
+      const seat = index + 1;
+      const guest = guests.find(g => g.seat === seat);
+      const match = Boolean(query) && (String(seat) === normalized || Boolean(guest && `${guest.name} ${guest.title}`.toLocaleLowerCase('ar').includes(query)));
+      button.classList.toggle('search-match', match);
+      button.classList.toggle('search-dim', Boolean(query) && !match);
+      if (match) matches++;
+    });
+    $('seat-search-result').textContent = query ? (matches ? `${matches} كرسي مطابق · اضغط على الكرسي لعرض التفاصيل` : 'لا توجد كراسي مطابقة لهذا البحث') : 'ابحث باسم الشخص أو الجهة أو رقم الكرسي.';
   }
   function renderList() {
     const query = $('search').value.trim().toLocaleLowerCase('ar');
@@ -97,7 +114,7 @@
     $('empty-state').querySelector('p').textContent = guests.length ? 'جرّب اسمًا آخر أو غيّر مرشح العرض.' : 'أضف أول ضيف، ثم اختر له مقعدًا في القاعة.';
   }
   function resetForm() {
-    editingId = null; $('guest-form').reset(); $('form-title').textContent = 'إضافة ضيف جديد';
+    editingId = null; $('guest-form').reset(); $('form-title').textContent = 'إضافة شخص يدويًا';
     $('save-guest').textContent = 'إضافة الضيف'; $('cancel-edit').hidden = true; seatOptions();
   }
   function editGuest(id) {
@@ -133,6 +150,7 @@
   $('name').addEventListener('input', ()=>$('name').setCustomValidity(''));
   $('cancel-edit').onclick=resetForm;
   $('new-guest-link').onclick=()=>{resetForm(); $('name').focus();};
+  $('seat-search').addEventListener('input',renderSeatSearch);
   $('search').addEventListener('input',renderList); $('filter').addEventListener('change',renderList);
   $('close-seat').onclick=()=>$('seat-dialog').close();
   $('edit-seat-guest').onclick=()=>{$('seat-dialog').close();editGuest(seatGuestId);};
