@@ -84,13 +84,15 @@
     const guest=state.guests.find(g=>g.id===id),row=state.rows.find(r=>r.id===rowId);
     if(!guest||!row||!Number.isInteger(seat)||seat<1||seat>row.seatCount)return;
     if(guest.rowId===rowId&&guest.seat===seat)return;
-    if(state.guests.some(g=>g.rowId===rowId&&g.seat===seat)){
-      message('notice','الكرسي مشغول. اختر كرسيًا فارغًا لنقل الضيف دون استبدال ضيف آخر.');return;
-    }
-    if(commit({...state,guests:state.guests.map(g=>g.id===id?{...g,rowId,seat}:g)},`تم نقل ${guest.name} إلى ${row.name} · مقعد ${seat}.`)){
-      movingId=null;$('move-banner').hidden=true;
-      document.querySelector(`[data-seat-id="${key(rowId,seat)}"]`)?.focus({preventScroll:true});
-    }
+    const other=state.guests.find(g=>g.rowId===rowId&&g.seat===seat);
+    const save=()=>{
+      const next={...state,guests:state.guests.map(g=>g.id===id?{...g,rowId,seat}:other&&g.id===other.id?{...g,rowId:guest.rowId,seat:guest.seat}:g)};
+      if(commit(next,other?`تم تبديل مقعدي ${guest.name} و${other.name}.`:`تم نقل ${guest.name} إلى ${row.name} · مقعد ${seat}.`)){
+        movingId=null;$('move-banner').hidden=true;
+        document.querySelector(`[data-seat-id="${key(rowId,seat)}"]`)?.focus({preventScroll:true});
+      }
+    };
+    if(other)confirm(`الكرسي مشغول بالضيف ${other.name}. هل تريد تبديل مقعده مع ${guest.name}؟ ستُحفظ بيانات الضيفين كاملة.`,save);else save();
   }
   function clearDrop(){document.querySelectorAll('.drop-target').forEach(b=>b.classList.remove('drop-target'));}
   function highlightGuest(guest){
@@ -116,7 +118,7 @@
   $('cancel-move').onclick=()=>{movingId=null;$('move-banner').hidden=true;};
   $('start-move').onclick=()=>{
     movingId=editingId;$('guest-dialog').close();
-    $('move-description').textContent='اختر كرسيًا فارغًا لنقل الضيف إليه.';$('move-banner').hidden=false;
+    $('move-description').textContent='اختر كرسيًا لنقل الضيف إليه، أو كرسيًا مشغولًا لتبديل مقعدي الضيفين.';$('move-banner').hidden=false;
   };
   function render(){
     $('total-count').textContent=state.guests.length;
@@ -145,13 +147,13 @@
         b.draggable=Boolean(g);
         b.ondragstart=e=>{if(!g)return;draggedId=g.id;e.dataTransfer.setData('text/plain',g.id);e.dataTransfer.effectAllowed='move';b.classList.add('dragging');};
         b.ondragend=()=>{draggedId=null;b.classList.remove('dragging');clearDrop();};
-        b.ondragover=e=>{if(!draggedId||g)return;e.preventDefault();e.dataTransfer.dropEffect='move';b.classList.add('drop-target');};
+        b.ondragover=e=>{if(!draggedId)return;e.preventDefault();e.dataTransfer.dropEffect='move';b.classList.add('drop-target');};
         b.ondragleave=()=>b.classList.remove('drop-target');
         b.ondrop=e=>{e.preventDefault();clearDrop();if(draggedId)moveGuest(draggedId,row.id,seat);draggedId=null;};
         if(g){
           let start=null,active=false;
           b.onpointerdown=e=>{if(e.pointerType!=='touch')return;start={x:e.clientX,y:e.clientY};active=false;b.setPointerCapture(e.pointerId);};
-          b.onpointermove=e=>{if(!start)return;if(Math.hypot(e.clientX-start.x,e.clientY-start.y)>10)active=true;if(!active)return;b.classList.add('dragging');clearDrop();const target=document.elementFromPoint(e.clientX,e.clientY)?.closest('.seat');if(target&&!target.classList.contains('taken'))target.classList.add('drop-target');};
+          b.onpointermove=e=>{if(!start)return;if(Math.hypot(e.clientX-start.x,e.clientY-start.y)>10)active=true;if(!active)return;b.classList.add('dragging');clearDrop();const target=document.elementFromPoint(e.clientX,e.clientY)?.closest('.seat');if(target)target.classList.add('drop-target');};
           b.onpointerup=e=>{if(!start)return;start=null;clearDrop();b.classList.remove('dragging');if(!active)return;suppressClickUntil=Date.now()+400;const target=document.elementFromPoint(e.clientX,e.clientY)?.closest('.seat');if(target){const [rowId,number]=target.dataset.seatId.split(':').map(Number);moveGuest(g.id,rowId,number);}active=false;};
           b.onpointercancel=()=>{start=null;active=false;b.classList.remove('dragging');clearDrop();};
         }

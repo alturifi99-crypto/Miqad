@@ -53,16 +53,20 @@ const assert=require('node:assert/strict');
  // Existing version-2 records without per-row counts retain their original 15 chairs.
  await page.evaluate(()=>{const d=JSON.parse(localStorage.getItem('miqadStateV2'));d.rows.forEach(r=>delete r.seatCount);localStorage.setItem('miqadStateV2',JSON.stringify(d));});await page.reload();assert.equal(await page.locator('.seat').count(),45);assert.equal(await chair(1,1).locator('span').textContent(),'أحمد المعدل');
  // Drag/drop updates only the location, and search follows the moved guest.
- await page.setViewportSize({width:1440,height:1000});
+ await page.setViewportSize({width:1440,height:1800});
  const original=(await snapshot()).guests.find(g=>g.name==='أحمد المعدل');
  await page.locator('#guest-search').fill('أحمد');assert.match(await page.locator('.guest-search-result').textContent(),/مقعد 1/);assert.equal(await chair(1,1).evaluate(n=>n.classList.contains('seat-found')),true);
  await chair(1,1).dragTo(chair(2,3));assert.equal(await chair(1,1).locator('span').textContent(),'متاح');assert.equal(await chair(2,3).locator('span').textContent(),'أحمد المعدل');
  assert.match(await page.locator('.guest-search-result').textContent(),/الصف 2.*مقعد 3/);assert.equal(await chair(2,3).evaluate(n=>n.classList.contains('seat-found')),true);
  const moved=(await snapshot()).guests.find(g=>g.id===original.id);assert.deepEqual({...moved,rowId:original.rowId,seat:original.seat},original);
- const beforeBlocked=JSON.stringify(await snapshot());await chair(2,3).dragTo(chair(4,2));assert.equal(JSON.stringify(await snapshot()),beforeBlocked);
+ const beforeSwap=JSON.stringify(await snapshot());await chair(2,3).dragTo(chair(4,2));await page.locator('#cancel-action').click();assert.equal(JSON.stringify(await snapshot()),beforeSwap);
+ const otherBefore=(await snapshot()).guests.find(g=>g.rowId===4&&g.seat===2);
+ await chair(2,3).dragTo(chair(4,2));await page.locator('#confirm-action').click();assert.equal(await chair(4,2).locator('span').textContent(),'أحمد المعدل');assert.equal(await chair(2,3).locator('span').textContent(),otherBefore.name);
+ assert.deepEqual((await snapshot()).guests.find(g=>g.id===otherBefore.id),{...otherBefore,rowId:2,seat:3});await page.reload();assert.equal(await chair(4,2).locator('span').textContent(),'أحمد المعدل');
+ await chair(4,2).dragTo(chair(2,3));await page.locator('#confirm-action').click();assert.equal(JSON.stringify(await snapshot()),beforeSwap);
  await page.reload();assert.equal(await chair(2,3).locator('span').textContent(),'أحمد المعدل');
  // Tap/keyboard alternative to dragging.
- await chair(2,3).click();await page.locator('#start-move').click();await chair(4,2).click();assert.equal(await page.locator('#move-banner').isVisible(),true);await chair(1,1).click();assert.equal(await chair(1,1).locator('span').textContent(),'أحمد المعدل');assert.equal(await page.locator('#move-banner').isVisible(),false);
+ await chair(2,3).click();await page.locator('#start-move').click();await chair(4,2).click();await page.locator('#cancel-action').click();assert.equal(await page.locator('#move-banner').isVisible(),true);await chair(1,1).click();assert.equal(await chair(1,1).locator('span').textContent(),'أحمد المعدل');assert.equal(await page.locator('#move-banner').isVisible(),false);
  await page.locator('#guest-search').fill('لا يوجد');assert.match(await page.locator('#guest-search-results').textContent(),/لا يوجد/);assert.equal(await page.locator('.seat-found').count(),0);
  // Real touch drag in a separate mobile context.
  const mobileContext=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const mobile=await mobileContext.newPage();await mobile.goto(url);await mobile.evaluate(data=>localStorage.setItem('miqadStateV2',JSON.stringify(data)),await snapshot());await mobile.reload();
@@ -95,6 +99,6 @@ const assert=require('node:assert/strict');
  // Invalid new-format data is protected, never overwritten with fresh state.
  await page.evaluate(()=>localStorage.setItem('miqadStateV2','broken'));await page.reload();await chair(1,1).click();await page.locator('#name').fill('محاولة');await page.locator('#save-guest').click();assert.equal(await page.evaluate(()=>localStorage.getItem('miqadStateV2')),'broken');
  assert.deepEqual(errors,[]);
- console.log('PASS: drag/drop, real touch move, keyboard/tap move, occupied-target protection, search highlight and persistence, direct +/- and row add/delete, limit buttons and confirmation, configurable per-row counts, safe chair reduction and old-format defaults, unique stable IDs, chair modal CRUD, all guest fields, edit/release confirmations, waiting-guest reassignment, settings grow/shrink/cancel/rename, no duplicate occupancy, persistence, legacy migration and original backup, storage errors and stale-write protection, injection safety, responsive widths 320/390/768/1440, no browser errors.');
+ console.log('PASS: drag/drop, real touch move, keyboard/tap move, occupied-chair swap and cancellation with preserved data, search highlight and persistence, direct +/- and row add/delete, limit buttons and confirmation, configurable per-row counts, safe chair reduction and old-format defaults, unique stable IDs, chair modal CRUD, all guest fields, edit/release confirmations, waiting-guest reassignment, settings grow/shrink/cancel/rename, no duplicate occupancy, persistence, legacy migration and original backup, storage errors and stale-write protection, injection safety, responsive widths 320/390/768/1440, no browser errors.');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
