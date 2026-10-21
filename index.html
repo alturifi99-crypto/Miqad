@@ -3,11 +3,78 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>مِيقاد MIQAD</title>
+<style>
+body{font-family:Arial;background:#101b2b;color:white;margin:0;padding:20px}
+h1{color:#d8b76a}
+section{background:#1c2b40;padding:20px;margin:15px 0;border-radius:12px}
+input,button{padding:12px;margin:5px;border-radius:8px;border:0;font-size:15px}
+button{background:#d8b76a;color:#101b2b;cursor:pointer}
+.seats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.seat{background:#31516b;color:white;padding:15px 5px}
+.taken{background:#27785c}
+li{margin:10px}
+</style>
 </head>
 <body>
-<h1>مرحباً بك في تطبيق مِيقاد</h1>
-<p>نظام إدارة البروتوكول وتجليس كبار الشخصيات</p>
+<h1>مِيقاد | MIQAD</h1>
+<p>نظام إدارة البروتوكول وتجليس كبار الشخصيات VIP</p>
+<section>
+<h2>إضافة ضيف</h2>
+<input id="name" placeholder="اسم الضيف">
+<button onclick="addGuest()">إضافة الضيف</button>
+</section>
+<section>
+<h2>مخطط المقاعد</h2>
+<p>المسرح</p>
+<div class="seats" id="seats"></div>
+</section>
+<section>
+<h2>قائمة الضيوف</h2>
+<ul id="guests"></ul>
+</section>
+<script>
+let guests=JSON.parse(localStorage.getItem("miqadGuests")||"[]");
+function save(){
+localStorage.setItem("miqadGuests",JSON.stringify(guests));
+}
+function render(){
+let seats=document.getElementById("seats");
+let list=document.getElementById("guests");
+seats.innerHTML="";
+list.innerHTML="";
+for(let i=1;i<=20;i++){
+let guest=guests.find(g=>g.seat===i);
+let btn=document.createElement("button");
+btn.className="seat"+(guest?" taken":"");
+btn.textContent=guest?guest.name:"مقعد "+i;
+btn.onclick=()=>assign(i);
+seats.appendChild(btn);
+}
+guests.forEach(g=>{
+let li=document.createElement("li");
+li.textContent=g.name+" — "+(g.seat?"مقعد "+g.seat:"بدون مقعد");
+list.appendChild(li);
+});
+}
+function addGuest(){
+let input=document.getElementById("name");
+let name=input.value.trim();
+if(!name)return alert("اكتب اسم الضيف");
+guests.push({id:Date.now()+Math.random(),name,seat:null});
+input.value="";
+save();render();
+}
+function assign(seat){
+let guest=guests.find(g=>g.seat===seat);
+if(guest)return alert("المقعد محجوز");
+let waiting=guests.find(g=>g.seat===null);
+if(!waiting)return alert("لا يوجد ضيف ينتظر التجليس");
+waiting.seat=seat;
+save();render();
+}
+render();
+</script>
 </body>
 </html>
-
