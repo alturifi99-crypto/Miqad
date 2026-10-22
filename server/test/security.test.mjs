@@ -125,3 +125,7 @@ const after=(await call('GET',path(a,`/workspaces/${wa.workspace.id}`),null,a)).
 test('deployment database probe connects to real PostgreSQL without modifying application records',async()=>{
  const {probeDatabase}=await import('../src/database-probe.mjs');const before=(await admin.query('SELECT count(*)::int AS n FROM guests')).rows[0].n;const result=await probeDatabase();assert.equal(result.status,'connected');assert.equal((await admin.query('SELECT count(*)::int AS n FROM guests')).rows[0].n,before);
 });
+
+test('schema preflight checks actual forced policies and preserves database records',async()=>{
+ const {inspectDatabase}=await import('../src/database-readiness.mjs');const before=(await admin.query('SELECT count(*)::int AS n FROM guests')).rows[0].n;assert.deepEqual(await inspectDatabase(),{status:'schema_checks_passed'});assert.equal((await admin.query('SELECT count(*)::int AS n FROM guests')).rows[0].n,before);
+});
