@@ -1,6 +1,5 @@
 import pg from 'pg';
-// Read-only preflight: the current migrations require role creation and a bypassing owner.
-// A managed owner needs a separately reviewed policy-function ownership strategy.
+// Read-only checks for both managed and local database owners.
 export async function inspectDatabase(config=process.env,{Client=pg.Client}={}){
  if(!config.DATABASE_ADMIN_URL)return {status:'not_configured'};
  let client;
@@ -10,11 +9,12 @@ export async function inspectDatabase(config=process.env,{Client=pg.Client}={}){
   const role=(await client.query('SELECT rolsuper,rolcreaterole,rolbypassrls FROM pg_roles WHERE rolname=current_user')).rows[0];
   if(!role)return {status:'unavailable'};
   if(!role.rolsuper&&!role.rolcreaterole)return {status:'role_creation_unavailable'};
-  if(!role.rolsuper&&!role.rolbypassrls)return {status:'managed_owner_review_required'};
   const metadata=await client.query("SELECT to_regclass('public.schema_migrations') IS NOT NULL AS tracked");
   if(!metadata.rows[0].tracked)return {status:'migration_required'};
   const applied=(await client.query('SELECT version FROM public.schema_migrations')).rows.map(r=>r.version);
-  if(!['001_foundation','002_hardening','003_platform_audit'].every(v=>applied.includes(v)))return {status:'migration_required'};
+  if(!['001_foundation','002_hardening','003_platform_audit','004_managed_policy_owner'].every(v=>applied.includes(v)))return {status:'migration_required'};
+  const fn=(await client.query("SELECT p.prosecdef, r.rolname, p.proconfig FROM pg_proc p JOIN pg_roles r ON r.oid=p.proowner WHERE p.oid=to_regprocedure('public.miqad_can(uuid,text[])')")).rows[0];
+  if(!fn?.prosecdef||fn.rolname!=='miqad_auth'||!fn.proconfig?.includes('search_path=pg_catalog, public'))return {status:'managed_owner_review_required'};
   const roles=(await client.query("SELECT rolname,rolsuper,rolbypassrls FROM pg_roles WHERE rolname=ANY($1::text[])",[['miqad_app','miqad_auth','miqad_platform']])).rows;
   if(roles.length!==3||roles.some(r=>r.rolsuper||r.rolbypassrls))return {status:'runtime_roles_unsafe'};
   const tables=['tenants','memberships','invitations','events','halls','workspaces','seating_rows','seats','guests','reservations','delegations','delegation_members','audit_logs','import_batches','tenant_subscriptions','platform_audit_logs'];
