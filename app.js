@@ -138,7 +138,7 @@
     movingId=editingId;$('guest-dialog').close();location.hash='#dashboard';
     $('move-description').textContent='اختر كرسيًا لنقل الضيف إليه، أو كرسيًا مشغولًا لتبديل مقعدي الضيفين.';$('move-banner').hidden=false;
   };
-  function chooseRow(rowId,toggle=false){if(!cloud?.minimal||cloud.editable===false)return;selectedRowId=toggle&&selectedRowId===rowId?null:rowId;document.querySelectorAll('.conference-row').forEach(section=>{const active=Number(section.dataset.rowId)===selectedRowId;section.classList.toggle('row-selected',active);const button=section.querySelector('.row-select'),controls=section.querySelector('.row-controls');if(button)button.setAttribute('aria-expanded',String(active));if(controls)controls.hidden=!active;});}
+  function chooseRow(rowId,toggle=false){if(!cloud?.minimal||cloud.editable===false)return;selectedRowId=toggle&&selectedRowId===rowId?null:rowId;document.querySelectorAll('.conference-row').forEach(section=>{const active=Number(section.dataset.rowId)===selectedRowId;section.classList.toggle('row-selected',active);const button=section.querySelector('.row-select'),controls=$(`row-controls-${section.dataset.rowId}`);if(button)button.setAttribute('aria-expanded',String(active));if(controls)controls.hidden=!active;});if($('premium-row-label'))$('premium-row-label').textContent=state.rows.find(r=>r.id===selectedRowId)?rowLabel(state.rows.find(r=>r.id===selectedRowId)):'اختر رقم صف من المخطط';}
   function selectSeat(rowId,seat){chooseRow(rowId);selectedLocation={rowId,seat};renderSeatInspector();}
   function renderSeatInspector(){
     document.querySelectorAll('.selected-seat').forEach(b=>b.classList.remove('selected-seat'));
@@ -199,7 +199,7 @@
     $('capacity-label').textContent=`من أصل ${state.rows.reduce((total,row)=>total+row.seatCount,0)} مقعدًا`;
     document.querySelectorAll('[data-metric]').forEach(output=>{output.textContent=$(output.dataset.metric).textContent;});
     $('add-row').disabled=state.rows.length>=50;
-    $('seats').replaceChildren();
+    $('seats').replaceChildren();$('premium-row-controls')?.replaceChildren();
     for(const row of state.rows){
       const section=node('section','','conference-row');section.dataset.rowId=row.id;
       const header=node('div','','row-heading');if(cloud?.minimal){const select=node('button','','row-select');select.type='button';select.disabled=cloud.editable===false;select.setAttribute('aria-label',`تحديد ${rowLabel(row)}`);select.setAttribute('aria-expanded',String(selectedRowId===row.id));select.setAttribute('aria-controls',`row-controls-${row.id}`);select.append(node('strong',rowLabel(row)),node('span',`${row.seatCount} مقعدًا`,'row-select-count'));select.onclick=()=>chooseRow(row.id,true);header.append(select);section.classList.toggle('row-selected',selectedRowId===row.id);}else header.append(node('h3',rowLabel(row)));
@@ -208,14 +208,14 @@
       const count=node('span',`${row.seatCount} كرسيًا`,'row-chair-count');
       const increase=node('button','+','chair-control');increase.type='button';increase.dataset.action='increase';increase.setAttribute('aria-label',`زيادة كراسي ${rowLabel(row)}`);increase.disabled=row.seatCount>=100;increase.onclick=()=>changeChairs(row.id,1);
       const remove=node('button','حذف الصف','button row-delete');remove.type='button';remove.setAttribute('aria-label',`حذف ${rowLabel(row)}`);remove.disabled=state.rows.length<=1;remove.title=state.rows.length<=1?'يجب الاحتفاظ بصف واحد على الأقل':'';remove.onclick=()=>deleteRow(row.id);
-      controls.append(decrease,count,increase,remove);header.append(controls);section.append(header);
+      controls.append(decrease,count,increase,remove);if($('premium-row-controls'))$('premium-row-controls').append(controls);else header.append(controls);section.append(header);
       const chairs=node('div','','seats');chairs.setAttribute('aria-label',rowLabel(row));chairs.style.setProperty('--seat-count',row.seatCount);chairs.style.minWidth=row.seatCount>15?`${row.seatCount*48}px`:'0';
       for(let seat=1;seat<=row.seatCount;seat++){
         const g=state.guests.find(g=>g.rowId===row.id&&g.seat===seat);
         const b=node('button','',`seat${g?' taken':''}${g?.category==='vip'?' vip-seat':''}`);b.type='button';b.dataset.seatId=key(row.id,seat);
         b.setAttribute('aria-label',`${rowLabel(row)}، مقعد ${seat}، ${g?g.name:'متاح'}`);
         b.append(node('strong',String(seat)),node('span',g?g.name:'متاح'));
-        b.onclick=()=>{if(Date.now()<suppressClickUntil)return;chooseRow(row.id);if(movingId)moveGuest(movingId,row.id,seat);else openGuest(row.id,seat);};
+        b.onclick=()=>{if(Date.now()<suppressClickUntil)return;chooseRow(row.id);if(movingId)moveGuest(movingId,row.id,seat);else if(document.body.classList.contains('premium-app')){selectSeat(row.id,seat);if(matchMedia('(max-width:700px)').matches)document.querySelector('.seat-inspector').scrollIntoView({block:'nearest',behavior:'smooth'});}else openGuest(row.id,seat);};
         b.draggable=Boolean(g);
         b.ondragstart=e=>{if(!g)return;draggedId=g.id;e.dataTransfer.setData('text/plain',g.id);e.dataTransfer.effectAllowed='move';b.classList.add('dragging');};
         b.ondragend=()=>{draggedId=null;b.classList.remove('dragging');clearDrop();};
@@ -232,7 +232,7 @@
         chairs.append(b);
       }section.append(chairs);$('seats').append(section);
     }
-    renderSearch();renderManagement();renderOverview();renderSeatInspector();renderGlobalSearch();
+    if(cloud?.minimal)chooseRow(selectedRowId);renderSearch();renderManagement();renderOverview();renderSeatInspector();renderGlobalSearch();
   }
   function fillGuest(g){$('name').value=g?.name||'';$('title').value=g?.title||'';$('organization').value=g?.organization||'';$('vip').checked=g?.category==='vip';$('notes').value=g?.notes||'';$('companions').value=g?.companions||'';}
   function openGuest(rowId,seat,id){
