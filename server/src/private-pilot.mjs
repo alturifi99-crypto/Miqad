@@ -7,5 +7,6 @@ export function privatePilot(config){
  secretCipher(config.AUTH_ENCRYPTION_KEY);mailSender(config);
  for(const [key,role] of [['DATABASE_URL','miqad_app'],['AUTH_DATABASE_URL','miqad_auth'],['PLATFORM_DATABASE_URL','miqad_platform']]){const url=new URL(config[key]);if(url.username!==role||!url.password)throw Error('Dedicated runtime role required');}
  if(config.DATABASE_ADMIN_URL||config.DATABASE_ROLE_SECRET)throw Error('Bootstrap credentials must be removed from the application process');
- return {email,origin:origin.origin};
+ const policy=config.PRIVATE_PILOT_MFA||'optional';if(!['optional','required'].includes(policy))throw Error('Invalid private pilot MFA policy');
+ return {email,origin:origin.origin,requireMfa:policy==='required'};
 }
