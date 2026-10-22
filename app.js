@@ -14,8 +14,9 @@
   let movingId=null, draggedId=null, suppressClickUntil=0;
   const node = (tag,text,cls) => {const n=document.createElement(tag);n.textContent=text;if(cls)n.className=cls;return n;};
   const option = (value,text) => {const n=node('option',text);n.value=value;return n;};
+  const rowLabel = row => cloud?.minimal ? `الصف ${state.rows.indexOf(row)+1}` : row.name;
   const key = (row,seat) => `${row}:${seat}`;
-  const label = g => g.otherWorkspaceId ? 'مخصص في قاعة أخرى' : g.rowId === null ? 'بانتظار التجليس' : `${state.rows.find(r=>r.id===g.rowId)?.name} · مقعد ${g.seat}`;
+  const label = g => g.otherWorkspaceId ? 'مخصص في قاعة أخرى' : g.rowId === null ? 'بانتظار التجليس' : `${rowLabel(state.rows.find(r=>r.id===g.rowId))} · مقعد ${g.seat}`;
   function message(id,text){$(id).textContent=text;$(id).hidden=false;}
   function valid(data){
     if(data?.version!==2 || !Array.isArray(data.rows) || !data.rows.length || data.rows.length>50 || !Array.isArray(data.guests))return false;
@@ -75,7 +76,7 @@
     const affected=g=>g.rowId===rowId&&g.seat>seatCount;
     const moved=state.guests.filter(affected).length;
     const save=async()=>{
-      if(await commit({...state,rows:state.rows.map(r=>r.id===rowId?{...r,seatCount}:r),guests:state.guests.map(g=>affected(g)?{...g,rowId:null,seat:null}:g)},`تم تحديث ${row.name} إلى ${seatCount} كرسيًا.`)){
+      if(await commit({...state,rows:state.rows.map(r=>r.id===rowId?{...r,seatCount}:r),guests:state.guests.map(g=>affected(g)?{...g,rowId:null,seat:null}:g)},`تم تحديث ${rowLabel(row)} إلى ${seatCount} كرسيًا.`)){
         document.querySelector(`[data-row-id="${rowId}"] [data-action="${delta>0?'increase':'decrease'}"]`)?.focus({preventScroll:true});
       }
     };
@@ -85,7 +86,7 @@
     if(state.rows.length<=1)return;
     const row=state.rows.find(r=>r.id===rowId);if(!row)return;
     const moved=state.guests.filter(g=>g.rowId===rowId).length;
-    confirm(`هل تريد حذف ${row.name}؟ سيُنقل ${moved} من الضيوف إلى الانتظار دون حذف بياناتهم.`,async()=>{
+    confirm(`هل تريد حذف ${rowLabel(row)}؟ سيُنقل ${moved} من الضيوف إلى الانتظار دون حذف بياناتهم.`,async()=>{
       if(await commit({...state,rows:state.rows.filter(r=>r.id!==rowId),guests:state.guests.map(g=>g.rowId===rowId?{...g,rowId:null,seat:null}:g)},'تم حذف الصف مع الاحتفاظ ببيانات الضيوف.'))$('add-row').focus({preventScroll:true});
     });
   }
@@ -104,7 +105,7 @@
     const other=state.guests.find(g=>g.rowId===rowId&&g.seat===seat);
     const save=async()=>{
       const next={...state,guests:state.guests.map(g=>g.id===id?{...g,rowId,seat}:other&&g.id===other.id?{...g,rowId:guest.rowId,seat:guest.seat}:g)};
-      if(await commit(next,other?`تم تبديل مقعدي ${guest.name} و${other.name}.`:`تم نقل ${guest.name} إلى ${row.name} · مقعد ${seat}.`)){
+      if(await commit(next,other?`تم تبديل مقعدي ${guest.name} و${other.name}.`:`تم نقل ${guest.name} إلى ${rowLabel(row)} · مقعد ${seat}.`)){
         movingId=null;$('move-banner').hidden=true;selectSeat(rowId,seat);
         document.querySelector(`[data-seat-id="${key(rowId,seat)}"]`)?.focus({preventScroll:true});
       }
@@ -144,7 +145,7 @@
     if(!row||selectedLocation.seat>row.seatCount){selectedLocation=null;$('selected-seat-number').textContent='—';$('selected-seat-badge').textContent='لم يُحدد';$('selected-guest-name').textContent='اختر مقعدًا من المخطط';$('selected-seat-location').textContent='تظهر بيانات الضيف وموقعه هنا.';$('selected-guest-details').replaceChildren();$('seat-inspector-actions').hidden=true;return;}
     const {rowId,seat}=selectedLocation,g=state.guests.find(g=>g.rowId===rowId&&g.seat===seat);
     document.querySelector(`[data-seat-id="${key(rowId,seat)}"]`)?.classList.add('selected-seat');
-    $('selected-seat-number').textContent=seat;$('selected-seat-badge').textContent=g?'محجوز':'متاح';$('selected-guest-name').textContent=g?.name||'مقعد متاح';$('selected-seat-location').textContent=`${row.name} · مقعد ${seat}`;
+    $('selected-seat-number').textContent=seat;$('selected-seat-badge').textContent=g?'محجوز':'متاح';$('selected-guest-name').textContent=g?.name||'مقعد متاح';$('selected-seat-location').textContent=`${rowLabel(row)} · مقعد ${seat}`;
     $('selected-guest-details').replaceChildren();
     if(g)for(const [title,text] of [['المنصب',g.title],['الجهة',g.organization],['المرافقون',g.companions],['الملاحظات',g.notes]])$('selected-guest-details').append(node('dt',title),node('dd',text||'—'));
     $('seat-inspector-actions').hidden=false;$('inspector-edit').textContent=g?'عرض وتعديل البيانات':'إضافة ضيف إلى المقعد';$('inspector-move').hidden=!g;$('inspector-release').hidden=!g;
@@ -152,7 +153,7 @@
   $('inspector-edit').onclick=()=>{if(selectedLocation)openGuest(selectedLocation.rowId,selectedLocation.seat);};
   $('inspector-move').onclick=()=>{const g=state.guests.find(g=>g.rowId===selectedLocation?.rowId&&g.seat===selectedLocation?.seat);if(g){movingId=g.id;$('move-description').textContent='اختر كرسيًا لنقل الضيف إليه، أو كرسيًا مشغولًا للتبديل.';$('move-banner').hidden=false;}};
   $('inspector-release').onclick=()=>{const g=state.guests.find(g=>g.rowId===selectedLocation?.rowId&&g.seat===selectedLocation?.seat);if(g)confirm(`هل تريد إخلاء مقعد ${g.name} وإبقائه في قائمة الانتظار؟`,()=>commit({...state,guests:state.guests.map(item=>item.id===g.id?{...item,rowId:null,seat:null}:item)},'تم إخلاء المقعد مع الاحتفاظ بالضيف.'));};
-  function setZoom(value){canvasZoom=Math.max(.6,Math.min(1.8,Math.round(value*10)/10));document.querySelector('.conference-floor').style.zoom=canvasZoom;$('zoom-label').textContent=`${Math.round(canvasZoom*100)}%`;$('zoom-in').disabled=canvasZoom>=1.8;$('zoom-out').disabled=canvasZoom<=.6;}
+  function setZoom(value){canvasZoom=Math.max(.6,Math.min(1.8,Math.round(value*10)/10));document.querySelector('.conference-floor').style.zoom=canvasZoom;if(cloud?.minimal)document.documentElement.style.setProperty('--layout-zoom',canvasZoom);$('zoom-label').textContent=`${Math.round(canvasZoom*100)}%`;$('zoom-in').disabled=canvasZoom>=1.8;$('zoom-out').disabled=canvasZoom<=.6;}
   $('zoom-in').onclick=()=>setZoom(canvasZoom+.1);$('zoom-out').onclick=()=>setZoom(canvasZoom-.1);$('zoom-reset').onclick=()=>setZoom(1);
   function fullscreenLabel(){const active=document.fullscreenElement===$('seating-section')||$('seating-section').classList.contains('focus-workspace');$('workspace-fullscreen').setAttribute('aria-label',active?'الخروج من ملء الشاشة':'عرض المخطط بملء الشاشة');$('workspace-fullscreen').setAttribute('aria-pressed',String(active));}
   $('workspace-fullscreen').onclick=async()=>{
@@ -200,18 +201,18 @@
     $('seats').replaceChildren();
     for(const row of state.rows){
       const section=node('section','','conference-row');section.dataset.rowId=row.id;
-      const header=node('div','','row-heading');header.append(node('h3',row.name));
-      const controls=node('div','','row-controls');controls.setAttribute('role','group');controls.setAttribute('aria-label',`التحكم في ${row.name}`);
-      const decrease=node('button','−','chair-control');decrease.type='button';decrease.dataset.action='decrease';decrease.setAttribute('aria-label',`تقليل كراسي ${row.name}`);decrease.disabled=row.seatCount<=1;decrease.onclick=()=>changeChairs(row.id,-1);
+      const header=node('div','','row-heading');header.append(node('h3',rowLabel(row)));
+      const controls=node('div','','row-controls');controls.setAttribute('role','group');controls.setAttribute('aria-label',`التحكم في ${rowLabel(row)}`);
+      const decrease=node('button','−','chair-control');decrease.type='button';decrease.dataset.action='decrease';decrease.setAttribute('aria-label',`تقليل كراسي ${rowLabel(row)}`);decrease.disabled=row.seatCount<=1;decrease.onclick=()=>changeChairs(row.id,-1);
       const count=node('span',`${row.seatCount} كرسيًا`,'row-chair-count');
-      const increase=node('button','+','chair-control');increase.type='button';increase.dataset.action='increase';increase.setAttribute('aria-label',`زيادة كراسي ${row.name}`);increase.disabled=row.seatCount>=100;increase.onclick=()=>changeChairs(row.id,1);
-      const remove=node('button','حذف الصف','button row-delete');remove.type='button';remove.setAttribute('aria-label',`حذف ${row.name}`);remove.disabled=state.rows.length<=1;remove.title=state.rows.length<=1?'يجب الاحتفاظ بصف واحد على الأقل':'';remove.onclick=()=>deleteRow(row.id);
+      const increase=node('button','+','chair-control');increase.type='button';increase.dataset.action='increase';increase.setAttribute('aria-label',`زيادة كراسي ${rowLabel(row)}`);increase.disabled=row.seatCount>=100;increase.onclick=()=>changeChairs(row.id,1);
+      const remove=node('button','حذف الصف','button row-delete');remove.type='button';remove.setAttribute('aria-label',`حذف ${rowLabel(row)}`);remove.disabled=state.rows.length<=1;remove.title=state.rows.length<=1?'يجب الاحتفاظ بصف واحد على الأقل':'';remove.onclick=()=>deleteRow(row.id);
       controls.append(decrease,count,increase,remove);header.append(controls);section.append(header);
-      const chairs=node('div','','seats');chairs.setAttribute('aria-label',row.name);chairs.style.setProperty('--seat-count',row.seatCount);chairs.style.minWidth=row.seatCount>15?`${row.seatCount*48}px`:'0';
+      const chairs=node('div','','seats');chairs.setAttribute('aria-label',rowLabel(row));chairs.style.setProperty('--seat-count',row.seatCount);chairs.style.minWidth=row.seatCount>15?`${row.seatCount*48}px`:'0';
       for(let seat=1;seat<=row.seatCount;seat++){
         const g=state.guests.find(g=>g.rowId===row.id&&g.seat===seat);
         const b=node('button','',`seat${g?' taken':''}${g?.category==='vip'?' vip-seat':''}`);b.type='button';b.dataset.seatId=key(row.id,seat);
-        b.setAttribute('aria-label',`${row.name}، مقعد ${seat}، ${g?g.name:'متاح'}`);
+        b.setAttribute('aria-label',`${rowLabel(row)}، مقعد ${seat}، ${g?g.name:'متاح'}`);
         b.append(node('strong',String(seat)),node('span',g?g.name:'متاح'));
         b.onclick=()=>{if(Date.now()<suppressClickUntil)return;if(movingId)moveGuest(movingId,row.id,seat);else openGuest(row.id,seat);};
         b.draggable=Boolean(g);
@@ -239,7 +240,7 @@
     activeSeat=g?{rowId:g.rowId,seat:g.seat}:{rowId,seat};editingId=g?.id??null;
     $('guest-form').reset();$('name').setCustomValidity('');$('guest-error').hidden=true;
     $('guest-dialog-title').textContent=g?'بيانات الضيف · تعديل':'إضافة ضيف إلى الكرسي';
-    $('guest-location').textContent=g?label(g):`${state.rows.find(r=>r.id===rowId).name} · مقعد ${seat}`;
+    $('guest-location').textContent=g?label(g):`${rowLabel(state.rows.find(r=>r.id===rowId))} · مقعد ${seat}`;
     $('release-seat').hidden=!g||g.rowId===null;$('start-move').hidden=!g||Boolean(g.otherWorkspaceId);
     $('waiting-picker').hidden=Boolean(g);
     $('waiting-guest').replaceChildren(option('','ضيف جديد'));
@@ -379,7 +380,7 @@
       $('secondary-title').textContent=routes[route];$('secondary-description').textContent=route==='settings'?'تخصيص الصفوف والكراسي في القاعة.':'هذا القسم غير متاح حاليًا.';
       $('secondary-message').textContent=route==='settings'?'يمكنك تعديل أسماء الصفوف وعددها وعدد الكراسي لكل صف من الإعدادات.':route==='check-in'?'لم تُضف بعد وظائف تسجيل الوصول والحضور.':'لم تُضف بعد وظائف إنشاء الفعاليات وإدارة القاعات.';
     }
-    document.querySelectorAll('.sidebar nav a').forEach(a=>{if(a.hash===`#${route}`)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
+    document.querySelectorAll('.sidebar nav a').forEach(a=>{if(cloud?.minimal?a.pathname==='/seating':a.hash===`#${route}`)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
   }
   $('settings-shortcut').onclick=()=>$('open-settings').click();
   const mobileSidebar=matchMedia('(max-width:700px), (max-width:1000px) and (max-height:500px) and (pointer:coarse)');
