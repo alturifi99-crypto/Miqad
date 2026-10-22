@@ -121,3 +121,7 @@ const bad=structuredClone(current.state);const guest=bad.guests.find(g=>g.id===e
 assert.equal((await call('PUT',url,{revision:current.revision,state:current.state},a)).statusCode,200);
 const after=(await call('GET',path(a,`/workspaces/${wa.workspace.id}`),null,a)).json();assert.deepEqual(after.reservations,before.reservations.filter(r=>r.id!==booking.id));const reserved=(await call('GET',path(a,`/workspaces/${w2.id}`),null,a)).json();assert.equal(reserved.reservations[0].id,booking.id);assert.equal(reserved.reservations[0].guest_id,booking.guest_id);
 });
+
+test('deployment database probe connects to real PostgreSQL without modifying application records',async()=>{
+ const {probeDatabase}=await import('../src/database-probe.mjs');const before=(await admin.query('SELECT count(*)::int AS n FROM guests')).rows[0].n;const result=await probeDatabase();assert.equal(result.status,'connected');assert.equal((await admin.query('SELECT count(*)::int AS n FROM guests')).rows[0].n,before);
+});
