@@ -1,3 +1,4 @@
+import {consoleShell} from './console-shell.mjs';
 import {privatePilot} from './private-pilot.mjs';
 import {configureAccountSecurity} from './account-security.mjs';
 import {siteState,saveSiteState} from './site-state.mjs';
@@ -25,7 +26,7 @@ export async function createApp(config=process.env,options={}){
  async function audit(c,ctx,action,details={}){await c.query('INSERT INTO audit_logs(tenant_id,user_id,action,details) VALUES($1,$2,$3,$4)',[ctx.tenantId,ctx.user.id,action,details]);}
  async function one(c,sql,args){const r=await c.query(sql,args);if(!r.rowCount)throw error(404,'Resource not found');return r.rows[0];}
  async function adminIdentity(req){const user=await identity(req);if(!(await auth.query('SELECT 1 FROM platform_admins WHERE user_id=$1',[user.id])).rowCount)throw error(403,'Platform administrator required');return user;}
- for(const [url,file,type] of [['/console','index.html','text/html; charset=utf-8'],['/console.js','console.js','application/javascript; charset=utf-8'],['/console.css','console.css','text/css; charset=utf-8'],['/security.js','security.js','application/javascript; charset=utf-8']])app.get(url,async(req,reply)=>{reply.type(type);return readFile(new URL('../public/'+file,import.meta.url),'utf8');});
+ for(const [url,file,type] of [['/console','index.html','text/html; charset=utf-8'],['/console.js','console.js','application/javascript; charset=utf-8'],['/console.css','console.css','text/css; charset=utf-8'],['/security.js','security.js','application/javascript; charset=utf-8'],['/unified.js','unified.js','application/javascript; charset=utf-8'],['/unified.css','unified.css','text/css; charset=utf-8']])app.get(url,async(req,reply)=>{reply.type(type);const content=await readFile(new URL('../public/'+file,import.meta.url),'utf8');return file==='index.html'?consoleShell(content,await readFile(new URL('../../index.html',import.meta.url),'utf8')):content;});
  for(const url of ['/','/site/'])app.get(url,async(req,reply)=>{const html=await readFile(new URL('../../index.html',import.meta.url),'utf8');reply.type('text/html; charset=utf-8');return html.replace('<script src="app.js','<script src="/site/cloud.js" defer></script><script src="app.js');});
  for(const [url,file,type] of [['/app.js','app.js','application/javascript'],['/styles.css','styles.css','text/css'],['/site/app.js','app.js','application/javascript'],['/site/styles.css','styles.css','text/css']])app.get(url,async(req,reply)=>{reply.type(type+'; charset=utf-8');return readFile(new URL('../../'+file,import.meta.url),'utf8');});
  app.get('/site/cloud.js',async(req,reply)=>{reply.type('application/javascript; charset=utf-8');return readFile(new URL('../public/cloud.js',import.meta.url),'utf8');});

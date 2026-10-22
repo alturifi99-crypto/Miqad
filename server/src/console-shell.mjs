@@ -1,0 +1,5 @@
+// Reuse the actual seating application's navigation markup and icons.
+export function consoleShell(html,site){
+ const sidebar=site.match(/<aside class="sidebar">[\s\S]*?<\/aside>/)[0].replaceAll('sidebar-toggle','console-sidebar-toggle').replaceAll('sidebar-menu','console-sidebar-menu');
+ return html.replace('<link rel="stylesheet" href="/console.css">','<link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/console.css"><link rel="stylesheet" href="/unified.css">').replace('<script src="/security.js" defer></script>','<script src="/security.js" defer></script><script src="/unified.js" defer></script>').replace('<body>','<body class="company-console">'+sidebar+'<button id="console-backdrop" class="console-backdrop" aria-label="إغلاق القائمة" hidden></button>').replace('<header><strong>','<header class="console-topbar"><button id="console-mobile-menu" type="button" aria-label="فتح القائمة" aria-expanded="false">☰</button><strong>').replace('<main>','<main id="console-main">');
+}
