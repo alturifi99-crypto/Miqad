@@ -12,7 +12,7 @@ export async function inspectDatabase(config=process.env,{Client=pg.Client}={}){
   const metadata=await client.query("SELECT to_regclass('public.schema_migrations') IS NOT NULL AS tracked");
   if(!metadata.rows[0].tracked)return {status:'migration_required'};
   const applied=(await client.query('SELECT version FROM public.schema_migrations')).rows.map(r=>r.version);
-  const required=['001_foundation','002_hardening','003_platform_audit','004_managed_policy_owner'];if(config.AUTH_SECURITY==='enabled')required.push('005_account_security');
+  const required=['001_foundation','002_hardening','003_platform_audit','004_managed_policy_owner'];if(config.AUTH_SECURITY==='enabled')required.push('005_account_security','006_email_login');
   if(!required.every(v=>applied.includes(v)))return {status:'migration_required'};
   const fn=(await client.query("SELECT p.prosecdef, r.rolname, p.proconfig FROM pg_proc p JOIN pg_roles r ON r.oid=p.proowner WHERE p.oid=to_regprocedure('public.miqad_can(uuid,text[])')")).rows[0];
   if(!fn?.prosecdef||fn.rolname!=='miqad_auth'||!fn.proconfig?.includes('search_path=pg_catalog, public'))return {status:'managed_owner_review_required'};
