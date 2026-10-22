@@ -1,0 +1,18 @@
+# First deployment prepares hosting only; company APIs remain disabled.
+services:
+  - type: web
+    name: miqad-app
+    runtime: node
+    region: frankfurt
+    plan: free
+    buildCommand: npm --prefix server ci
+    startCommand: node server/src/main.mjs
+    healthCheckPath: /api/health
+    autoDeployTrigger: off
+    envVars:
+      - key: NODE_VERSION
+        value: '22'
+      - key: NODE_ENV
+        value: production
+      - key: DEPLOYMENT_MODE
+        value: setup

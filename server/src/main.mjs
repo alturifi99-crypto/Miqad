@@ -1,0 +1,10 @@
+import {createApp} from './app.mjs';
+import {createSetupApp} from './setup-app.mjs';
+const mode=process.env.DEPLOYMENT_MODE||'application';
+if(!['setup','application'].includes(mode))throw Error('Invalid deployment mode');
+const app=mode==='setup'?createSetupApp():await createApp();
+const port=Number(process.env.PORT||8090);
+if(!Number.isInteger(port)||port<1||port>65535)throw Error('Invalid listening port');
+await app.listen({host:process.env.RENDER==='true'?'0.0.0.0':'127.0.0.1',port});
+console.log(mode==='setup'?'Miqad hosting setup is online. Company APIs are disabled.':'Miqad development application is online. Production rollout is disabled.');
+for(const signal of ['SIGINT','SIGTERM'])process.on(signal,async()=>{await app.close();process.exit(0);});
